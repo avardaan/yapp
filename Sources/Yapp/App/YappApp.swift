@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 @main
 struct YappApp: App {
@@ -22,8 +23,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Menu-bar-only is intentional: no windows and no Dock activation.
         NSApp.setActivationPolicy(.accessory)
         ActivityIndicator.shared.start(session: DictationSession.shared)
-        FnShortcut.shared.start()
+        requestLaunchPermissions()
         Task { await DictationSession.shared.prepare() }
+    }
+
+    private func requestLaunchPermissions() {
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined else {
+            FnShortcut.shared.start()
+            return
+        }
+        // Request access at first launch without starting capture. Serialize the
+        // native prompts so Accessibility does not compete with Microphone.
+        // Keep the callback API: the async SDK bridge previously crashed here.
+        AVCaptureDevice.requestAccess(for: .audio) { _ in
+            Task { @MainActor in
+                FnShortcut.shared.start()
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
