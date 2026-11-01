@@ -3,3 +3,6 @@ build/
 Models/
 .DS_Store
 Vendor/WhisperKit/.git/
+
+# Per-machine public signing identity; private keys remain in Keychain.
+.signing-identity
