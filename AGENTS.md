@@ -5,21 +5,9 @@ not a changelog or a duplicate of source code. Update it when a runtime boundary
 platform requirement, or product constraint changes. Keep tunable values,
 implementation details, command recipes, and benchmark results elsewhere.
 
-## Product contract
+## Runtime architecture
 
-- Yapp is a native macOS push-to-talk dictation utility from **zeroslop**. Keep
-  the company name lowercase.
-- It lives in the menu bar, without a Dock icon or main application window.
-  A small, non-interactive activity indicator appears only during dictation;
-  a standard About dialog is an intentional exception.
-- Keep the experience quiet: preserve input focus, avoid extra windows, and use
-  brief sound cues and restrained visual feedback. No custom onboarding flow
-  is currently intended; use normal macOS permission prompts and Settings.
-- Dictation must work entirely offline, including first launch after installation.
-  Do not introduce accounts, cloud inference, runtime asset downloads, or telemetry
-  transmission as incidental dependencies.
-
-## Runtime flow
+### Dictation lifecycle
 
 ```text
 App launch -> initialize local model and shortcut listener -> ready
@@ -29,11 +17,7 @@ Shortcut released -> stop capture -> check audio activity -> local ASR
   -> clean up temporary audio -> ready
 ```
 
-Silence, cancellation, permission denial, and failures must not insert text.
-Treat recording and transcription as separate phases. Prevent overlapping
-sessions and reject late permission callbacks from cancelled recordings.
-
-## Responsibilities and framework choices
+### Components and runtime frameworks
 
 - **App lifecycle and presentation:** SwiftUI owns the menu and observable UI;
   narrow AppKit bridges handle application lifecycle, the nonactivating activity
@@ -63,7 +47,29 @@ sessions and reject late permission callbacks from cancelled recordings.
   only if the clipboard has not changed meanwhile. Never restore focus or paste
   into a different field merely to force an insertion to succeed.
 
-## Permissions and app identity
+## Requirements and constraints
+
+### Product and experience
+
+- Yapp is a native macOS push-to-talk dictation utility from **zeroslop**. Keep
+  the company name lowercase.
+- It lives in the menu bar, without a Dock icon or main application window.
+  A small, non-interactive activity indicator appears only during dictation;
+  a standard About dialog is an intentional exception.
+- Keep the experience quiet: preserve input focus, avoid extra windows, and use
+  brief sound cues and restrained visual feedback. No custom onboarding flow
+  is currently intended; use normal macOS permission prompts and Settings.
+- Dictation must work entirely offline, including first launch after installation.
+  Do not introduce accounts, cloud inference, runtime asset downloads, or telemetry
+  transmission as incidental dependencies.
+
+### Session safety
+
+Silence, cancellation, permission denial, and failures must not insert text.
+Treat recording and transcription as separate phases. Prevent overlapping
+sessions and reject late permission callbacks from cancelled recordings.
+
+### Permissions
 
 - The normal runtime requires **Microphone** for capture and **Accessibility**
   for shortcut observation, input-target checks, and insertion.
@@ -77,6 +83,8 @@ sessions and reject late permission callbacks from cancelled recordings.
   Recognition permission for the existing dictation flow.
 - Let macOS mediate approvals. A successful API registration or a visible Settings
   switch alone does not prove events or insertion work; verify real behavior.
+### App identity, signing, and distribution
+
 - Keep bundle ID **`com.zeroslop.yapp`**, signer requirements, and application
   location consistent. Permission approvals depend on application identity.
   Changing identity may require fresh approvals.
@@ -87,7 +95,7 @@ sessions and reject late permission callbacks from cancelled recordings.
   Application, Hardened Runtime, secure timestamping, notarization, and stapling.
   Local development signing is not a public-release substitute.
 
-## Local data and system settings
+### Data, offline operation, and system settings
 
 - Bundle every required model/tokenizer asset. Missing or corrupt assets must
   produce a local error rather than triggering a download. Preserve the vendored
@@ -102,7 +110,7 @@ sessions and reject late permission callbacks from cancelled recordings.
   disabling its single-press emoji action. Restore that saved action automatically
   when selecting a different shortcut. Do not overwrite unrelated keyboard settings.
 
-## Evolution and standing constraints
+### Evolution and repository constraints
 
 - Evaluate new models against the current baseline instead of assuming parameter
   count predicts quality, speed, memory, or battery cost. **yapp-bench** is a future
