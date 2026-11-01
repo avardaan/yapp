@@ -26,3 +26,20 @@ Shortcut menu: current key and Change Shortcut… only. Fixed choices are Fn, Ri
 
 ## Accessibility-based shortcut listener
 The default shortcut backend now uses AppKit global + local event monitors under Accessibility authorization. It does not request Input Monitoring. Test by disabling/resetting only Yapp's Input Monitoring permission, leaving Accessibility enabled, then holding/releasing Fn in a focused editor and checking the indicator, insertion, chord cancellation, and another press after completion. Local logs report the backend and Input Monitoring status without typed text. The previous backend remains available for comparison: `open -n build/Yapp.app --args --input-monitoring-listener`. Verified on this development Mac on 2026-11-01 after resetting Yapp’s ListenEvent approval and confirming that Yapp was absent from System Settings → Input Monitoring: real Fn press/release reached recording and transcription, and the user confirmed that both the soundbar and input insertion worked. This verifies the current Mac; clean-install and supported-OS coverage remain release checks. The normal Permissions menu therefore contains only Microphone and Accessibility.
+
+## DMG releases
+
+`./script/release.sh --build` creates a separate Developer ID signed, hardened-runtime
+app and DMG in `build/distribution/`. It does not launch or replace the development app.
+The build targets the current Mac architecture (currently Apple silicon); macOS 14+ is required.
+This mode is not notarized and must not be published as a finished release.
+
+Store notarization credentials interactively in Keychain (never in this repo):
+`xcrun notarytool store-credentials yapp-notary`. Use the paid team `5VZ9SWJ9C6`
+and an Apple app-specific password. Do not paste the password into chat or shell arguments.
+Then run `./script/release.sh --notarize`. This uploads the app and DMG to Apple,
+staples tickets to both for offline validation, checks Gatekeeper, and writes a SHA-256 checksum.
+Override the public identity/profile names with `YAPP_RELEASE_IDENTITY` and
+`YAPP_NOTARY_PROFILE` if needed. Credentials and private keys remain in Keychain.
+Before publishing, test a downloaded/quarantined build on a clean Mac, including
+Microphone, Accessibility, Fn recording, insertion, and offline model loading.
