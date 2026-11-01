@@ -1,31 +1,55 @@
-import SwiftUI
+import AppKit
 import AVFoundation
 import WhisperKit
-
-@main
-struct YappApp: App {
-    @StateObject private var session = DictationSession()
-    var body: some Scene {
-        WindowGroup("Yapp") { ContentView(session: session) }
-            .defaultSize(width: 560, height: 440)
-        MenuBarExtra("Yapp", systemImage: "waveform") {
-            Button("Show Yapp") { NSApp.activate(ignoringOtherApps: true); NSApp.windows.first?.makeKeyAndOrderFront(nil) }
-            Divider()
-            Button("Quit Yapp") { NSApp.terminate(nil) }
-        }
-    }
-}
+import OSLog
 
 @MainActor
 final class DictationSession: ObservableObject {
+    static let shared = DictationSession()
     enum Phase { case loading, ready, requestingPermission, recording, transcribing, failed }
-    @Published var phase: Phase = .loading
+    private let logger = Logger(subsystem: "com.zeroslop.yapp", category: "Dictation")
+    @Published var phase: Phase = .loading {
+        didSet { if oldValue != phase { logger.info("Phase: \(String(describing: self.phase), privacy: .public)") } }
+    }
     @Published var status = "Loading English model…"
     @Published var transcript = ""
+    @Published var inputLevel: Double = 0
+    private var meterTimer: Timer?
     private var engine: WhisperKit?
     private var recorder: AVAudioRecorder?
     private var audioURL: URL?
     private var initialized = false
+    private var permissionRequest = UUID()
+    private var shortcutOwnsRecording = false
+    private var pendingShortcut: Task<Void, Never>?
+    private var insertionTarget: TextInsertion.Target?
+
+    func shortcutPressed() {
+        guard phase == .ready, !shortcutOwnsRecording else { return }
+        shortcutOwnsRecording = true
+        insertionTarget = TextInsertion.captureTarget()
+        // Ignore taps and leave a moment for Fn+arrow/function-key chords.
+        pendingShortcut = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
+            guard let self, self.shortcutOwnsRecording, self.phase == .ready else { return }
+            self.start()
+        }
+    }
+
+    func shortcutReleased() {
+        guard shortcutOwnsRecording else { return }
+        pendingShortcut?.cancel(); pendingShortcut = nil
+        shortcutOwnsRecording = false
+        if phase == .requestingPermission { cancelRecording() }
+        else if phase == .recording { Task { await stop() } }
+    }
+
+    func cancelShortcut() {
+        guard shortcutOwnsRecording else { return }
+        pendingShortcut?.cancel(); pendingShortcut = nil
+        shortcutOwnsRecording = false
+        cancelRecording()
+    }
 
     func prepare() async {
         guard !initialized else { return }
@@ -51,13 +75,20 @@ final class DictationSession: ObservableObject {
 
     func start() {
         guard phase == .ready else { return }
+        if !shortcutOwnsRecording { insertionTarget = TextInsertion.captureTarget() }
+        permissionRequest = UUID()
+        let request = permissionRequest
         phase = .requestingPermission
+        if AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
+            beginRecording()
+            return
+        }
         status = "Checking microphone access…"
         // Use the callback API directly: the SDK-generated async Bool bridge
         // crashed in CheckedContinuation.resume on this Mac after TCC replied.
         AVCaptureDevice.requestAccess(for: .audio) { [weak self] granted in
             Task { @MainActor [weak self] in
-                guard let self else { return }
+                guard let self, self.phase == .requestingPermission, self.permissionRequest == request else { return }
                 guard granted else {
                     self.phase = .ready
                     self.status = "Allow microphone access in System Settings → Privacy & Security → Microphone."
@@ -78,15 +109,25 @@ final class DictationSession: ObservableObject {
                 AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 16,
                 AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false
             ])
+            capture.isMeteringEnabled = true
             guard capture.record() else { throw NSError(domain: "Yapp", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not start the microphone."]) }
             recorder = capture
+            meterTimer?.invalidate()
+            meterTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self, let recorder = self.recorder else { return }
+                    recorder.updateMeters()
+                    self.inputLevel = min(1, max(0, (Double(recorder.averagePower(forChannel: 0)) + 55) / 50))
+                }
+            }
             phase = .recording
-            status = "Listening… Click Stop when you’re done."
+            status = "Recording · Release shortcut to finish"
         } catch { cleanup(); phase = .ready; status = error.localizedDescription }
     }
 
     func stop() async {
         guard phase == .recording, let url = audioURL, let engine else { return }
+        meterTimer?.invalidate(); meterTimer = nil; inputLevel = 0
         recorder?.stop()
         recorder = nil
         phase = .transcribing
@@ -96,8 +137,9 @@ final class DictationSession: ObservableObject {
             let options = DecodingOptions(language: "en", skipSpecialTokens: true, withoutTimestamps: true)
             let results = try await engine.transcribe(audioPath: url.path, decodeOptions: options)
             transcript = results.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget)
             phase = .ready
-            status = transcript.isEmpty ? "No speech detected. Try again." : "Done · Audio deleted · Transcript stays here"
+            status = insertionStatus
         } catch { phase = .ready; status = error.localizedDescription }
     }
 
@@ -105,43 +147,30 @@ final class DictationSession: ObservableObject {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(transcript, forType: .string)
     }
+    func cancelRecording() {
+        guard phase == .recording || phase == .requestingPermission else { return }
+        permissionRequest = UUID()
+        cleanup()
+        phase = .ready
+        status = "Recording discarded"
+    }
+
+    func retryLoading() {
+        guard phase == .failed else { return }
+        initialized = false
+        phase = .loading
+        status = "Loading English model…"
+        Task { await prepare() }
+    }
+
+    func shutdown() { pendingShortcut?.cancel(); cleanup() }
+
     private func cleanup() {
+        meterTimer?.invalidate(); meterTimer = nil; inputLevel = 0
         recorder?.stop(); recorder = nil
         if let audioURL { try? FileManager.default.removeItem(at: audioURL) }
         audioURL = nil
+        insertionTarget = nil
     }
     private func fail(_ error: Error) { phase = .failed; status = error.localizedDescription }
-}
-
-struct ContentView: View {
-    @ObservedObject var session: DictationSession
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
-                Image(systemName: "waveform.circle.fill").font(.system(size: 38)).foregroundStyle(.orange)
-                VStack(alignment: .leading) {
-                    Text("Yapp").font(.largeTitle.bold())
-                    Text("Your voice. On your Mac.").foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-            Text(session.status).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
-            TextEditor(text: $session.transcript)
-                .font(.system(size: 16)).padding(8)
-                .background(.background).clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.quaternary))
-            HStack {
-                Button { Task { if session.phase == .recording { await session.stop() } else { session.start() } } } label: {
-                    Label(session.phase == .recording ? "Stop & Transcribe" : "Record", systemImage: session.phase == .recording ? "stop.fill" : "mic.fill")
-                }
-                .buttonStyle(.borderedProminent).tint(session.phase == .recording ? .red : .orange)
-                .disabled(session.phase != .ready && session.phase != .recording)
-                if session.phase == .loading || session.phase == .transcribing { ProgressView().controlSize(.small) }
-                Spacer()
-                Button("Copy", action: session.copy).disabled(session.transcript.isEmpty)
-            }
-        }
-        .padding(24).frame(minWidth: 480, minHeight: 380)
-        .task { await session.prepare() }
-    }
 }
