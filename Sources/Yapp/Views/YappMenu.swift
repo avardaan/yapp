@@ -34,9 +34,6 @@ struct YappMenu: View {
             }
         }
         Menu("Permissions") {
-            Text(shortcut.inputMonitoringAllowed ? "Input Monitoring: Allowed" : "Input Monitoring: Not Allowed")
-            Button("Enable Input Monitoring…") { shortcut.requestPermission() }
-            Button("Input Monitoring Settings…") { shortcut.openPermissionSettings() }
             Text(microphoneStatus)
             Text(TextInsertion.allowed ? "Text Insertion: Allowed" : "Text Insertion: Not Allowed")
             Button("Enable Text Insertion…") { TextInsertion.requestPermission() }
