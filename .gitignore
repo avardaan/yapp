@@ -1,0 +1,5 @@
+.build/
+build/
+Models/
+.DS_Store
+Vendor/WhisperKit/.git/
