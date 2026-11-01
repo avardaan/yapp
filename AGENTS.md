@@ -44,3 +44,7 @@ choices or requirements change, not for routine implementation changes.
 - **Models:** benchmark replacements rather than guessing from parameter counts.
   Distinguish download size, process memory, accelerator allocations, and peak use.
   `yapp-bench` is a future direction, not an existing subsystem.
+
+For an authorized wipe/reinstall test, follow `docs/fresh-install-test.md`.
+Preserve project assets and Keychain credentials; prepare the latest notarized DMG
+before resetting state, and restore the saved Globe action before deleting defaults.
