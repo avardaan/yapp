@@ -7,9 +7,13 @@ final class FnShortcut: ObservableObject {
     static let shared = FnShortcut()
     @Published private(set) var selected: DictationShortcut
     private let logger = Logger(subsystem: "com.zeroslop.yapp", category: "Shortcut")
-    @Published private(set) var status = "Fn shortcut starting…" {
+    @Published private(set) var status = "Shortcut starting…" {
         didSet { if oldValue != status { logger.info("Shortcut: \(self.status, privacy: .public)") } }
     }
+    // Keep the proven event-tap backend available for a controlled comparison.
+    private let usesAccessibilityListener = !CommandLine.arguments.contains("--input-monitoring-listener")
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
     private var tap: CFMachPort?
     private var source: CFRunLoopSource?
     private var timer: Timer?
@@ -29,7 +33,12 @@ final class FnShortcut: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.poll() }
         }
-        if !CGPreflightListenEventAccess() && !defaults.bool(forKey: "requestedInputMonitoring") {
+        if usesAccessibilityListener {
+            if !AXIsProcessTrusted() && !defaults.bool(forKey: "requestedShortcutAccessibility") {
+                defaults.set(true, forKey: "requestedShortcutAccessibility")
+                TextInsertion.requestPermission()
+            }
+        } else if !CGPreflightListenEventAccess() && !defaults.bool(forKey: "requestedInputMonitoring") {
             requestPermission()
         }
     }
@@ -83,6 +92,46 @@ final class FnShortcut: ObservableObject {
     }
 
     private func attachIfAllowed() {
+        if usesAccessibilityListener { attachAccessibilityMonitor(); return }
+        attachInputMonitoringTap()
+    }
+
+    private func attachAccessibilityMonitor() {
+        guard globalMonitor == nil, localMonitor == nil else { return }
+        guard AXIsProcessTrusted() else {
+            status = "Accessibility required"
+            return
+        }
+        let mask: NSEvent.EventTypeMask = [.flagsChanged, .keyDown]
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
+            MainActor.assumeIsolated { self?.handleAppKitEvent(event) }
+        }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: mask) { [weak self] event in
+            MainActor.assumeIsolated { self?.handleAppKitEvent(event) }
+            return event
+        }
+        guard globalMonitor != nil, localMonitor != nil else {
+            detach()
+            status = "Shortcut listener unavailable"
+            return
+        }
+        logger.info("Accessibility listener attached; Input Monitoring granted: \(CGPreflightListenEventAccess(), privacy: .public)")
+        status = "Hold \(selected.title) to talk"
+    }
+
+    private func handleAppKitEvent(_ event: NSEvent) {
+        let action: ShortcutKeyState.Action?
+        switch event.type {
+        case .flagsChanged:
+            let flags = CGEventFlags(rawValue: UInt64(event.modifierFlags.rawValue))
+            action = state.flagsChanged(keyCode: Int64(event.keyCode), isDown: flags.contains(selected.flag), triggerKeyCode: selected.keyCode)
+        case .keyDown: action = state.otherKeyPressed()
+        default: return
+        }
+        apply(action)
+    }
+
+    private func attachInputMonitoringTap() {
         guard tap == nil else { return }
         guard CGPreflightListenEventAccess() else {
             status = "Input Monitoring required"
@@ -145,8 +194,11 @@ final class FnShortcut: ObservableObject {
     private func cancelHold() { apply(state.reset()) }
 
     private func poll() {
-        if !CGPreflightListenEventAccess() {
-            detach(); status = "Input Monitoring required"; return
+        let allowed = usesAccessibilityListener ? AXIsProcessTrusted() : CGPreflightListenEventAccess()
+        if !allowed {
+            detach()
+            status = usesAccessibilityListener ? "Accessibility required" : "Input Monitoring required"
+            return
         }
         attachIfAllowed()
         if let tap, !CGEvent.tapIsEnabled(tap: tap) {
@@ -162,6 +214,10 @@ final class FnShortcut: ObservableObject {
 
     private func detach() {
         cancelHold()
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        globalMonitor = nil
+        localMonitor = nil
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         source = nil
         if let tap { CFMachPortInvalidate(tap) }
