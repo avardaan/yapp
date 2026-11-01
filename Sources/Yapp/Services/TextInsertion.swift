@@ -37,6 +37,7 @@ final class TextInsertion {
     // Return an explanatory status if insertion is unsafe or unavailable.
     // Never paste into a field/app the user switched to during transcription.
     static func insert(_ text: String, into target: Target?) async -> String {
+        let text = DictationText.clean(text)
         guard !text.isEmpty else { return "No speech detected" }
         guard allowed else { return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
         guard let target, stillFocused(target) else { return "Input focus changed; use Copy Last Transcript." }

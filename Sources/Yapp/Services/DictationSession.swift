@@ -134,9 +134,23 @@ final class DictationSession: ObservableObject {
         status = "Transcribing on your Mac…"
         defer { cleanup() }
         do {
+            let hasActivity = try await Task.detached(priority: .userInitiated) {
+                try AudioActivityCheck.hasActivity(at: url)
+            }.value
+            guard hasActivity else {
+                transcript = ""
+                phase = .ready
+                status = "No speech detected"
+                return
+            }
             let options = DecodingOptions(language: "en", skipSpecialTokens: true, withoutTimestamps: true)
             let results = try await engine.transcribe(audioPath: url.path, decodeOptions: options)
-            transcript = results.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            transcript = DictationText.clean(results.map(\.text).joined(separator: " "))
+            guard !transcript.isEmpty else {
+                phase = .ready
+                status = "No speech detected"
+                return
+            }
             let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget)
             phase = .ready
             status = insertionStatus
