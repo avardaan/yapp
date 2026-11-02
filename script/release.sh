@@ -71,6 +71,10 @@ else
     echo "Signed DMG (NOT notarized; do not publish yet): $DMG"
 fi
 (cd "$ROOT" && shasum -a 256 "$(basename "$DMG")") > "$DMG.sha256"
+# Stable filename for GitHub's /releases/latest/download/ URL. Keep the versioned
+# artifact too, so existing direct download links and checksums remain valid.
+cp "$DMG" "$ROOT/Yapp-$ARCH.dmg"
+(cd "$ROOT" && shasum -a 256 "Yapp-$ARCH.dmg") > "$ROOT/Yapp-$ARCH.dmg.sha256"
 if [[ "$MODE" == --notarize ]]; then
     # Re-archive after stapling; this is the exact archive Sparkle will verify/install.
     mkdir -p "$ROOT/updates"

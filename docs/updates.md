@@ -31,9 +31,10 @@ No update network requests are needed for normal dictation or app launch.
    to sign `build/distribution/updates/Yapp-<version>-arm64.zip` and generate its
    appcast. It checks the public key matches Info.plist, preserves earlier feed
    entries, and disables delta generation. It does not publish anything.
-4. Upload the DMG, checksum, and update ZIP to the matching GitHub Release first.
+4. Upload the versioned DMG/checksum, stable `Yapp-arm64.dmg`/checksum, and
+   update ZIP to the matching GitHub Release before marking it latest.
    Confirm the public download URL and digest. Then copy the generated appcast
-   into `website/appcast.xml`, update the site’s DMG link, commit and push Pages.
+   into `website/appcast.xml`, commit and push Pages. The website’s stable latest-download link needs no version edit.
    Never advertise an archive before it is available.
 5. Test an older, signed updater-enabled build against the live feed: manually
    check, download, install/relaunch, then verify the installed build/signature.
