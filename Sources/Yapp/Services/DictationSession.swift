@@ -28,9 +28,9 @@ final class DictationSession: ObservableObject {
         guard phase == .ready, !shortcutOwnsRecording else { return }
         shortcutOwnsRecording = true
         insertionTarget = TextInsertion.captureTarget()
-        // Ignore taps and leave a moment for Fn+arrow/function-key chords.
+        // Start on key-down without a hold threshold; keep capture out of the keyboard callback.
         pendingShortcut = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
+            guard !Task.isCancelled else { return }
             guard let self, self.shortcutOwnsRecording, self.phase == .ready else { return }
             self.start()
         }
