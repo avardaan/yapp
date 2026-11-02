@@ -3,7 +3,7 @@ import Foundation
 /// Remove known non-speech annotations without removing ordinary spoken words.
 enum DictationText {
     static func clean(_ text: String) -> String {
-        let annotations = #"(?i)[\[(]\s*(?:silence|blank[ _]audio|no[ _]speech|inaudible|unintelligible|music|applause|laughter|footsteps|background noise)\s*[\])]"#
+        let annotations = #"(?i)[\[({]\s*(?:silence|paused?|blank[ _]audio|no[ _]speech|inaudible|unintelligible|music|applause|laughter|footsteps|background noise|(?:mouse|keyboard)[ _]+(?:click(?:s|ing)?|typ(?:ing|es))|click(?:s|ing)?)\s*[\])}]"#
         return text.replacingOccurrences(of: annotations, with: "", options: .regularExpression)
             .replacingOccurrences(of: #"[ \t]{2,}"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)

@@ -4,12 +4,14 @@ import AppKit
 
 final class SilenceTests: XCTestCase {
     func testNonSpeechAnnotationsProduceNoText() {
-        for text in ["[Silence]", " (silence) ", "[BLANK_AUDIO]", "[Silence] [Silence]", "[music]", "(footsteps)"] {
+        for text in ["[Silence]", " (silence) ", "[BLANK_AUDIO]", "[Silence] [Silence]", "[music]", "(footsteps)", "{Paused]", "[Paused]", "(mouse clicking)", "[keyboard typing]", "(clicking)"] {
             XCTAssertEqual(DictationText.clean(text), "")
         }
     }
     func testRealSpeechAndUnrelatedBracketsRemain() {
         XCTAssertEqual(DictationText.clean("I prefer silence."), "I prefer silence.")
+        XCTAssertEqual(DictationText.clean("I paused before clicking the mouse."), "I paused before clicking the mouse.")
+        XCTAssertEqual(DictationText.clean("Hello. (mouse clicking) Next sentence."), "Hello. Next sentence.")
         XCTAssertEqual(DictationText.clean("[Silence] Hello there."), "Hello there.")
         XCTAssertEqual(DictationText.clean("Review [architecture] tomorrow."), "Review [architecture] tomorrow.")
     }
