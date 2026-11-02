@@ -44,3 +44,18 @@ Sparkle’s tools are in `.build/artifacts/sparkle/Sparkle/bin/` after package
 resolution. To generate the key on a new publisher machine, use
 `generate_keys --account zeroslop.yapp`; back up the Keychain securely outside Git.
 For an existing app, restore the existing key rather than generating a new one.
+
+## Verified installation
+
+On the development Mac, an updater-enabled test bundle signed with the same
+Developer ID and assigned build 2 was installed temporarily. The user ran
+Check for Updates → Install Update → Install and Relaunch against the live HTTPS
+feed and confirmed relaunch. The resulting `/Applications/Yapp.app` is 0.1.2
+(build 3); its Info.plist, executable, and sealed-resource manifest match the
+notarized release. Deep signature verification, stapled ticket validation, and
+Gatekeeper assessment all passed; a new Yapp process was running. This tests the
+real signed upgrade path on this Mac, not clean-install behavior on all Macs.
+
+Local and GitHub CI: 20 tests passed. The genuine update ZIP passed Ed25519
+verification; a byte-modified copy was rejected. The public ZIP and DMG digests
+match the local release artifacts.
