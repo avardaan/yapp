@@ -46,7 +46,7 @@ const unavailable=document.createElement('button');
 unavailable.className=download.className;
 unavailable.type='button';
 unavailable.disabled=true;
-unavailable.textContent='Unsupported by your OS';
+unavailable.textContent='Unavailable for your OS';
 download.replaceWith(unavailable);
 }
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
