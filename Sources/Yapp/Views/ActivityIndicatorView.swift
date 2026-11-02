@@ -23,10 +23,10 @@ struct ActivityIndicatorView: View {
     private let gold = Color(red: 242 / 255, green: 181 / 255, blue: 68 / 255)
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 0.12)) { timeline in
+        TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 60.0)) { timeline in
             let tick = timeline.date.timeIntervalSinceReferenceDate
             let processing = session.phase == .transcribing
-            let opening = reduceMotion ? 25 : 12 + (sin(tick * (processing ? 7 : 4)) + 1) * 12
+            let opening = reduceMotion ? 25 : 12 + (sin(tick * 9) + 1) * 12
             HStack(spacing: 10) {
                 PacmanMark(opening: opening)
                     .fill(gold).frame(width: 15, height: 15)
