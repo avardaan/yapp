@@ -11,5 +11,5 @@ Sources are SVG vectors. Render 1024px PNG masters from the repository root with
 `swift design/icons/render.swift`. macOS app icons will be packaged as ICNS after
 choosing a direction; the bundle’s icon and About panel should share that asset.
 
-Palette: amber #F2B544, charcoal #1C1C1E. Mouth half-angle: 28 degrees.
+Selected palette: golden amber #F4B241 (midpoint of #F2B544 and #F5AE3D), charcoal #1C1C1E. Mouth half-angle: 28 degrees.
 Keep the menu-bar symbol monochrome/template so macOS handles its appearance.
