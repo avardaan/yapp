@@ -20,7 +20,7 @@ struct PacmanMark: Shape {
 struct ActivityIndicatorView: View {
     @ObservedObject var session: DictationSession
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let gold = Color(red: 242 / 255, green: 181 / 255, blue: 68 / 255)
+    private let gold = Color(red: 244 / 255, green: 178 / 255, blue: 65 / 255)
 
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 60.0)) { timeline in

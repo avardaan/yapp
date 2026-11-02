@@ -2,15 +2,8 @@ import AppKit
 
 @MainActor
 enum YappMark {
-    static let aboutImage = NSImage(size: NSSize(width: 64, height: 64), flipped: false) { _ in
-        NSColor(calibratedRed: 0.88, green: 0.76, blue: 0.38, alpha: 1).setFill()
-        let center = NSPoint(x: 32, y: 32)
-        let path = NSBezierPath()
-        path.move(to: center)
-        path.appendArc(withCenter: center, radius: 27, startAngle: 28, endAngle: 332, clockwise: false)
-        path.close()
-        path.fill()
-        return true
+    static var aboutImage: NSImage {
+        NSImage(named: "Yapp") ?? NSApp.applicationIconImage
     }
 
     static func menuImage(for phase: DictationSession.Phase) -> NSImage {

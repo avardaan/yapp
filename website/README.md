@@ -12,5 +12,5 @@ match the uploaded DMG; update it when publishing a new version.
 DNS at Porkbun: root ALIAS → avardaan.github.io; www CNAME → avardaan.github.io.
 Nameservers remain at Porkbun.
 
-Pill design: #1C1C1E at 99% opacity, amber #F2B544, bars at 78% of that amber.
+Pill design: #1C1C1E at 99% opacity, amber #F4B241, bars at 78% of that amber.
 The website illustrates recording on hover; the app responds to microphone audio.
