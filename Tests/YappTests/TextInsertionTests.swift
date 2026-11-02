@@ -8,7 +8,7 @@ final class TextInsertionTests: XCTestCase {
     func testMissingTargetNeverChangesClipboard() async {
         let revision = NSPasteboard.general.changeCount
         let result = await TextInsertion.insert("test dictation", into: nil)
-        XCTAssertTrue(result.contains("Copy Last Transcript"))
+        XCTAssertTrue(result?.contains("Copy Last Transcript") == true)
         XCTAssertEqual(NSPasteboard.general.changeCount, revision)
     }
 
@@ -17,7 +17,7 @@ final class TextInsertionTests: XCTestCase {
         let revision = NSPasteboard.general.changeCount
         let invalid = TextInsertion.Target(processID: -1, element: AXUIElementCreateSystemWide())
         let result = await TextInsertion.insert("test dictation", into: invalid)
-        XCTAssertTrue(result.contains("Copy Last Transcript"))
+        XCTAssertTrue(result?.contains("Copy Last Transcript") == true)
         XCTAssertEqual(NSPasteboard.general.changeCount, revision)
     }
 

@@ -153,7 +153,7 @@ final class DictationSession: ObservableObject {
             }
             let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget)
             phase = .ready
-            status = insertionStatus
+            status = insertionStatus ?? "Ready · English · On-device"
         } catch { phase = .ready; status = error.localizedDescription }
     }
 

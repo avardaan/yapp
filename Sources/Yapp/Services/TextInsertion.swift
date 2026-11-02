@@ -34,9 +34,9 @@ final class TextInsertion {
         return current.processID == target.processID && CFEqual(current.element, target.element)
     }
 
-    // Return an explanatory status if insertion is unsafe or unavailable.
+    // Return nil after sending Paste, or an explanatory status if insertion is unsafe or unavailable.
     // Never paste into a field/app the user switched to during transcription.
-    static func insert(_ text: String, into target: Target?) async -> String {
+    static func insert(_ text: String, into target: Target?) async -> String? {
         let text = DictationText.clean(text)
         guard !text.isEmpty else { return "No speech detected" }
         guard allowed else { return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
@@ -69,7 +69,7 @@ final class TextInsertion {
         up.post(tap: .cghidEventTap)
         try? await Task.sleep(for: .milliseconds(350))
         restoreClipboard(saved, ifUnchanged: revision)
-        return "Text sent to input"
+        return nil
     }
 
     private static func restoreClipboard(_ saved: [[NSPasteboard.PasteboardType: Data]], ifUnchanged revision: Int) {
