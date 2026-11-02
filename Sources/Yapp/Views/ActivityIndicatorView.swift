@@ -20,16 +20,16 @@ struct PacmanMark: Shape {
 struct ActivityIndicatorView: View {
     @ObservedObject var session: DictationSession
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private let gold = Color(red: 0.88, green: 0.76, blue: 0.38)
+    private let gold = Color(red: 242 / 255, green: 181 / 255, blue: 68 / 255)
 
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 0.12)) { timeline in
             let tick = timeline.date.timeIntervalSinceReferenceDate
             let processing = session.phase == .transcribing
             let opening = reduceMotion ? 25 : 12 + (sin(tick * (processing ? 7 : 4)) + 1) * 12
-            HStack(spacing: 9) {
+            HStack(spacing: 10) {
                 PacmanMark(opening: opening)
-                    .fill(gold).frame(width: 12, height: 12)
+                    .fill(gold).frame(width: 15, height: 15)
                 HStack(spacing: 3) {
                     ForEach(0..<7, id: \.self) { index in
                         if processing {
@@ -38,16 +38,16 @@ struct ActivityIndicatorView: View {
                                 .frame(width: 3, height: 14)
                         } else {
                             let weight = 1 - abs(Double(index - 3)) / 5
-                            Capsule().fill(.primary.opacity(0.55))
+                            Capsule().fill(gold.opacity(0.78))
                                 .frame(width: 3, height: 3 + CGFloat(session.inputLevel * weight) * 12)
                                 .frame(height: 15)
                         }
                     }
                 }
             }
-            .frame(width: 96, height: 30)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(.primary.opacity(0.08), lineWidth: 0.5))
+            .frame(width: 96, height: 32)
+            .background(Color(red: 34 / 255, green: 39 / 255, blue: 32 / 255), in: Capsule())
+            .overlay(Capsule().strokeBorder(.white.opacity(0.03), lineWidth: 0.5))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(processing ? "Yapp transcribing" : "Yapp recording")
         }
