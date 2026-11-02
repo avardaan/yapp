@@ -1,5 +1,30 @@
 name: Tests
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Vendor/**"
+      - "Resources/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - "Info.plist"
+      - "build.sh"
+      - "script/**"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Vendor/**"
+      - "Resources/**"
+      - "Package.swift"
+      - "Package.resolved"
+      - "Info.plist"
+      - "build.sh"
+      - "script/**"
+      - ".github/workflows/test.yml"
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
