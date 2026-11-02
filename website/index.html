@@ -28,6 +28,7 @@
 .yappman-hello p{pointer-events:auto;padding:4px;margin:-4px}
 .yappman-hello svg{pointer-events:none}
 .yappman-hello .arrow-hit{pointer-events:stroke;stroke:transparent;stroke-width:12}
+.download:disabled{background:var(--ink);opacity:.5;cursor:not-allowed;font-family:inherit;font-size:inherit}
 </style></head><body>
 <header><a class="brand" href="#" aria-label="Yapp home"><svg class="brand-yappman" viewBox="0 0 240 240" aria-hidden="true"><path/></svg>yapp</a></header>
 <main><section class="hero"><div><h1>Less clacking.<br><em>More yapping.</em></h1><p class="intro">Free, offline, on-device dictation. Type at the speed of sound.</p><a class="download" href="https://github.com/avardaan/yapp/releases/latest/download/Yapp-arm64.dmg">Download for Mac <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12 4v16m-6-6 6 6 6-6"/></svg></a></div><div class="yapping-hero" role="img" aria-label="Yapp’s amber logo. Say hello to yappman."><div class="yapper-stage" aria-hidden="true"><div class="app-floaty"><svg class="yapper" viewBox="0 0 240 240"><path id="yapp-mouth" d="M120 120 L229.6 168.8 A120 120 0 1 1 229.6 71.2 Z"/></svg><div class="live-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div><div class="yappman-hello"><svg viewBox="0 0 180 75" aria-hidden="true"><path d="M155 65C99 72 26 56 22 7M14 18L22 7 32 17"/><path class="arrow-hit" d="M155 65C99 72 26 56 22 7M14 18L22 7 32 17"/></svg><p>Say hello to <span class="character-name">yappman</span></p></div></div></section>
@@ -35,6 +36,19 @@
 <section class="how" id="how"><h2>Works everywhere<br>you do.</h2><div class="steps"><div><h3>Hold</h3><p>Place your cursor anywhere you want to write. Hold <kbd>Fn</kbd> to begin.</p></div><div><h3>Speak</h3><p>A small soundbar shows Yapp is listening. Speak naturally, in English.</p></div><div><h3>Release</h3><p>Release the key. Yapp transcribes and inserts your words into the focused text field.</p></div></div></section>
 <section class="details"><h2>In case you’re<br>wondering.</h2><div class="faq"><details><summary>How do I install it?</summary><p>Open the downloaded DMG and drag Yapp to Applications. Launch Yapp and allow Microphone and Accessibility access. You’ll find Yapp in the menu bar.</p></details><details><summary>Why Accessibility permission?</summary><p>Yapp needs it to detect your shortcut in other apps, check the focused text field, and paste your transcription. Microphone access is used to record your speech.</p></details><details><summary>Does my voice leave my Mac?</summary><p>No. Never. Your voice is transcribed entirely on your Mac using a bundled model. No cloud transcription, no uploads, no transcript history.</p></details><details><summary>What if Fn opens the emoji picker?</summary><p>In System Settings → Keyboard, set “Press 🌐 key to” to “Do Nothing.” You can also choose Right Option or Right Control from Yapp’s Shortcut menu.</p></details><details><summary>Which Macs are supported?</summary><p>This download is for Apple silicon Macs running macOS 14 or later. English dictation is supported. The app is Developer ID signed and notarized by Apple.</p></details></div></section></main>
 <footer><span>crafted with care by <a href="https://github.com/avardaan" target="_blank" rel="noopener noreferrer" aria-label="Vardaan on GitHub (opens in a new tab)">Vardaan <span aria-hidden="true">↗</span></a></span></footer><script>
+// iPadOS can advertise a Mac platform; touch support distinguishes it here.
+const platform=navigator.userAgentData?.platform||navigator.platform||'';
+const mobileApple=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(/Mac/i.test(platform)&&navigator.maxTouchPoints>1);
+const knownNonMac=mobileApple||/Windows|Win32|Win64|Linux|Android|CrOS/i.test(platform+' '+navigator.userAgent);
+if(knownNonMac){
+const download=document.querySelector('a.download');
+const unavailable=document.createElement('button');
+unavailable.className=download.className;
+unavailable.type='button';
+unavailable.disabled=true;
+unavailable.textContent='Unsupported by your OS';
+download.replaceWith(unavailable);
+}
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 function wireChomp(target,mouth){
 let hovered=false,frame=0,started=0;
