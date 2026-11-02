@@ -3,6 +3,21 @@
     <channel>
         <title>Yapp</title>
         <item>
+            <title>0.1.4</title>
+            <pubDate>Mon, 02 Nov 2026 01:05:14 -0800</pubDate>
+            <link>https://yapp.now/</link>
+            <sparkle:version>5</sparkle:version>
+            <sparkle:shortVersionString>0.1.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[- Return Status to Ready after dictation is sent to the focused input.
+- Credit Vardaan in About and the app copyright, with a GitHub link in About.
+
+Dictation remains fully offline. Updates are manual only.
+]]></description>
+            <enclosure url="https://github.com/avardaan/yapp/releases/download/v0.1.4/Yapp-0.1.4-arm64.zip" length="136028982" type="application/octet-stream" sparkle:edSignature="VP1w36IvNBDeiJcIdilcy1ZENu7tRBOemI3IFutsDzVovO+5WINcetdIxUuqy/D84IglMCz90ZDR22I3918fBg=="/>
+        </item>
+        <item>
             <title>0.1.3</title>
             <pubDate>Mon, 02 Nov 2026 00:15:32 -0800</pubDate>
             <link>https://yapp.now/</link>
