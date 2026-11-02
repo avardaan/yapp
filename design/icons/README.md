@@ -1,15 +1,7 @@
-# Icon directions
+# App icon
 
-Local design comparison: `preview.html`. No icon has been installed or published yet.
-
-- 01: amber Yappman on charcoal; closest to the app’s floating indicator.
-- 02: charcoal Yappman on amber.
-- 03: standalone amber Yappman with transparent background.
-- favicon.svg: a simple amber mark for browser tabs.
-
-Sources are SVG vectors. Render 1024px PNG masters from the repository root with
-`swift design/icons/render.swift`. macOS app icons will be packaged as ICNS after
-choosing a direction; the bundle’s icon and About panel should share that asset.
-
-Selected palette: golden amber #F4B241 (midpoint of #F2B544 and #F5AE3D), charcoal #1C1C1E. Mouth half-angle: 28 degrees.
+`01-charcoal.svg` is the approved vector: golden amber #F4B241 on charcoal #1C1C1E.
+Render its 1024px PNG from the repository root with `swift design/icons/render.swift`.
+The packaged icon lives in `Resources/Yapp.icns`; browser favicons live in `website/`.
 Keep the menu-bar symbol monochrome/template so macOS handles its appearance.
+Past design explorations remain in Git history.
