@@ -4,7 +4,7 @@ Less clacking. More yapping.
 
 Free, offline, on-device English dictation for macOS. Hold Fn, speak, then release
 to insert text where you are writing. Yapp lives in the menu bar, with a small
-sound-reactive indicator while recording. By **zeroslop**.
+sound-reactive indicator while recording. By [**Vardaan**](https://github.com/avardaan).
 
 [Website](https://yapp.now/) · [Downloads](https://github.com/avardaan/yapp/releases/latest)
 

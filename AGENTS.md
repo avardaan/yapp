@@ -40,7 +40,7 @@ choices or requirements change, not for routine implementation changes.
 - **Identity:** keep `com.zeroslop.yapp`, signing requirements, and app location
   stable. Use certificate-based signing; no silent ad-hoc fallback. Private keys
   stay in Keychain. Public downloads need a separate Developer ID/notarization setup.
-- **Product:** company name is always **zeroslop**. Keep the UI quiet and preserve
+- **Product:** user-facing creator credit is **Vardaan**, linked to `https://github.com/avardaan`. Keep internal bundle/signing identifiers unchanged. Keep the UI quiet and preserve
   input focus. Preserve third-party licenses and attribution.
 - **Changes:** make meaningful local commits on `main`; publish only when requested; source, releases, and Pages share `avardaan/yapp`. Never commit secrets, signing configuration, models, or build output.
 - **Models:** benchmark replacements rather than guessing from parameter counts.
