@@ -7,13 +7,10 @@ struct YappMenu: View {
     @ObservedObject private var updater = AppUpdater.shared
 
     var body: some View {
-        Button("About") {
-            NSApp.orderFrontStandardAboutPanel(options: [
-                .applicationIcon: YappMark.aboutImage,
-                .credits: NSAttributedString(string: "Private, offline dictation.\nHold your shortcut to talk.\nRelease to insert.\nMade by zeroslop.")
-            ])
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        Button("About") { AboutPanel.show() }
+        Button("Check for Updates…") { updater.checkForUpdates() }
+            .disabled(!updater.canCheckForUpdates || session.phase == .recording || session.phase == .transcribing)
+        Divider()
         Menu("Status") {
             ForEach(Array(statusLines.enumerated()), id: \.offset) { _, line in
                 Text(line)
@@ -46,8 +43,6 @@ struct YappMenu: View {
                 NSWorkspace.shared.open(url)
             }
         }
-        Button("Check for Updates…") { updater.checkForUpdates() }
-            .disabled(!updater.canCheckForUpdates || session.phase == .recording || session.phase == .transcribing)
         Button("Quit") { NSApp.terminate(nil) }
     }
 

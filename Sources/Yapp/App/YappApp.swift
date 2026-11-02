@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Menu-bar-only is intentional: no windows and no Dock activation.
         NSApp.setActivationPolicy(.accessory)
         ActivityIndicator.shared.start(session: DictationSession.shared)
+        if CommandLine.arguments.contains("--about") { AboutPanel.show() }
         requestLaunchPermissions()
         Task { await DictationSession.shared.prepare() }
     }
