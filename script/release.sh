@@ -35,10 +35,11 @@ cp LICENSE "$APP/Contents/Resources/Licenses/Yapp-GPL-3.0.txt"
 while IFS= read -r -d '' bundle; do
     ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"
 done < <(find "$BIN" -maxdepth 1 -type d -name '*.bundle' -print0)
-# SwiftPM links dependencies statically; fail if a future change introduces nested code.
+# Only the explicitly embedded/signed Sparkle framework may contain nested code.
 if find "$APP/Contents/Resources" -type f -exec file {} + | grep -q 'Mach-O'; then
     echo "Nested executable code needs explicit inside-out signing." >&2; exit 1
 fi
+./script/embed-sparkle.sh "$APP" "$IDENTITY" secure
 codesign --force --sign "$IDENTITY" --options runtime --timestamp \
     --entitlements Resources/Release.entitlements "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
@@ -68,4 +69,10 @@ if [[ "$MODE" == --notarize ]]; then
 else
     echo "Signed DMG (NOT notarized; do not publish yet): $DMG"
 fi
-shasum -a 256 "$DMG" > "$DMG.sha256"
+(cd "$ROOT" && shasum -a 256 "$(basename "$DMG")") > "$DMG.sha256"
+if [[ "$MODE" == --notarize ]]; then
+    # Re-archive after stapling; this is the exact archive Sparkle will verify/install.
+    mkdir -p "$ROOT/updates"
+    ditto -c -k --sequesterRsrc --keepParent "$APP" "$ROOT/updates/Yapp-$VERSION-$ARCH.zip"
+    ./script/generate-appcast.sh "$ROOT/updates"
+fi

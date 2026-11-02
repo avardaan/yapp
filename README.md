@@ -47,6 +47,18 @@ Fn setup saves the previous Globe-key action before disabling the emoji action;
 selecting another shortcut restores the saved preference. Live keyboard preference
 refresh varies by macOS version. Yapp never logs speech, clipboard contents, or typed text.
 
+## Updates
+
+Check for Updates… opens Sparkle’s native check, download, install, and relaunch
+interface. Checks are manual only: no launch-time or scheduled requests, background
+downloads, automatic installs, or system profiling. Dictation remains fully offline.
+Update checks and downloads require internet, only when requested by the user.
+
+The HTTPS feed is `https://yapp.now/appcast.xml`; archives live on GitHub Releases.
+Sparkle verifies Ed25519 archive signatures before extraction and installation.
+Version 0.1.1 and earlier need one manual installation of a version with the updater.
+See [the update publishing guide](docs/updates.md).
+
 ## Releases and website
 
 Use `YAPP_RELEASE_IDENTITY="YOUR DEVELOPER ID APPLICATION CERTIFICATE"` with
@@ -72,6 +84,9 @@ folder is uploaded to Pages. See [website/README.md](website/README.md).
 
 Yapp’s original code is **GPL-3.0-only**. Copyright © 2026 zeroslop.
 See [LICENSE](LICENSE) and [BRANDING.md](BRANDING.md).
+
+Sparkle 2.10.1 is BSD licensed with additional upstream notices; its full LICENSE
+is bundled with the app.
 
 WhisperKit is MIT licensed; preserve `Vendor/WhisperKit/LICENSE` and `NOTICES`.
 Whisper model weights and tokenizer originate from OpenAI Whisper (MIT); the

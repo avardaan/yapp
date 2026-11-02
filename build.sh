@@ -19,6 +19,7 @@ mkdir -p "$APP/Contents/Resources/Licenses"
 cp LICENSE "$APP/Contents/Resources/Licenses/Yapp-GPL-3.0.txt"
 cp -R Models/. "$APP/Contents/Resources/Models/"
 find .build -path '*release/*.bundle' -maxdepth 5 -type d -exec cp -R {} "$APP/Contents/Resources/" \;
-codesign --force --deep --sign "$IDENTITY" --timestamp=none "$APP"
+./script/embed-sparkle.sh "$APP" "$IDENTITY" none
+codesign --force --sign "$IDENTITY" --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
 echo "Built $APP"

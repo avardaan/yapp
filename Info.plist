@@ -11,9 +11,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.1</string>
+	<string>0.1.2</string>
 	<key>CFBundleVersion</key>
-	<string>2</string>
+	<string>3</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
@@ -26,5 +26,19 @@
 	<string>Yapp transcribes your voice entirely on this Mac.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>https://yapp.now/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>guw9innzsUn3v7GAJUrrhn7h3bpXnfS0gPnGk9KypBA=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 </dict>
 </plist>

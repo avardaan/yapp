@@ -14,6 +14,9 @@ choices or requirements change, not for routine implementation changes.
   The old Input Monitoring backend is diagnostic-only; no automatic fallback.
 - A main-actor-owned dictation session coordinates state and cleanup. Keep
   recording/inference out of keyboard callbacks and prevent overlapping sessions.
+- Updates: Sparkle 2 is initialized only by Check for Updates…; no scheduled checks,
+  automatic downloads/installs, or profiling. HTTPS appcast is published by Pages;
+  archives on GitHub Releases require Ed25519 signatures. Private key stays in Keychain.
 - AVFoundation captures microphone audio. WhisperKit/Core ML runs bundled Whisper
   `base.en` and its tokenizer, loaded at launch. The model is not supplied by macOS.
 

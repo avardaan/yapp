@@ -4,6 +4,7 @@ import AVFoundation
 struct YappMenu: View {
     @ObservedObject var session: DictationSession
     @ObservedObject private var shortcut = FnShortcut.shared
+    @ObservedObject private var updater = AppUpdater.shared
 
     var body: some View {
         Button("About") {
@@ -45,6 +46,8 @@ struct YappMenu: View {
                 NSWorkspace.shared.open(url)
             }
         }
+        Button("Check for Updates…") { updater.checkForUpdates() }
+            .disabled(!updater.canCheckForUpdates || session.phase == .recording || session.phase == .transcribing)
         Button("Quit") { NSApp.terminate(nil) }
     }
 
