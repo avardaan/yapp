@@ -46,7 +46,7 @@ struct ActivityIndicatorView: View {
                 }
             }
             .frame(width: 96, height: 32)
-            .background(Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255).opacity(0.88), in: Capsule())
+            .background(Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255).opacity(0.95), in: Capsule())
             .overlay(Capsule().strokeBorder(.white.opacity(0.03), lineWidth: 0.5))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(processing ? "Yapp transcribing" : "Yapp recording")
