@@ -22,7 +22,7 @@ Background noise can still cause recognition errors.
 
 ## Build from source
 
-Install Xcode or the Swift command-line tools, Python 3, and an Apple code-signing
+Install Xcode 16.4 or newer (Swift 6), Python 3, and an Apple code-signing
 certificate. Clone this repository, then run:
 
 ```sh
