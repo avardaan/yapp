@@ -1,12 +1,16 @@
-# Yapp website
+# Website
 
-Static GitHub Pages landing page: https://yapp.now/.
-Public website/download repository: https://github.com/avardaan/yapp-releases.
-Only website files and release assets belong there; never push the app repository.
+Public site: https://yapp.now/ · Repository: https://github.com/avardaan/yapp
 
-Publish index.html and CNAME to the public repository root. Pages deploys from
-main / (root). The download points to the latest GitHub Release asset; update
-its filename and displayed version when publishing a new version.
+GitHub Pages deploys `website/` through `.github/workflows/pages.yml` on pushes
+to main. Configure Settings → Pages → Source: GitHub Actions. Preserve the custom
+domain `yapp.now` and Enforce HTTPS. Never upload the repository root as the site.
 
-Porkbun DNS: root ALIAS → avardaan.github.io; www CNAME → avardaan.github.io.
-Nameservers stay at Porkbun. Enable Enforce HTTPS once GitHub issues the certificate.
+The download button links to the latest GitHub Release asset. Its filename must
+match the uploaded DMG; update it when publishing a new version.
+
+DNS at Porkbun: root ALIAS → avardaan.github.io; www CNAME → avardaan.github.io.
+Nameservers remain at Porkbun.
+
+Pill design: #1C1C1E at 99% opacity, amber #F2B544, bars at 78% of that amber.
+The website illustrates recording on hover; the app responds to microphone audio.

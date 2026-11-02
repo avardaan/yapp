@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 MODE="${1:---build}"
 [[ "$MODE" == --build || "$MODE" == --notarize ]] || { echo "Usage: $0 [--build|--notarize]" >&2; exit 2; }
-IDENTITY="${YAPP_RELEASE_IDENTITY:-Developer ID Application: Vardaan Aashish (5VZ9SWJ9C6)}"
+IDENTITY="${YAPP_RELEASE_IDENTITY:?Set YAPP_RELEASE_IDENTITY to your Developer ID Application certificate}"
 PROFILE="${YAPP_NOTARY_PROFILE:-yapp-notary}"
 ROOT="$PWD/build/distribution"
 APP="$ROOT/Yapp.app"
@@ -31,6 +31,7 @@ ditto Models "$APP/Contents/Resources/Models"
 cp Vendor/WhisperKit/LICENSE "$APP/Contents/Resources/Licenses/WhisperKit-LICENSE"
 cp Vendor/WhisperKit/NOTICES "$APP/Contents/Resources/Licenses/WhisperKit-NOTICES"
 cp Resources/Licenses/Whisper-LICENSE "$APP/Contents/Resources/Licenses/Whisper-LICENSE"
+cp LICENSE "$APP/Contents/Resources/Licenses/Yapp-GPL-3.0.txt"
 while IFS= read -r -d '' bundle; do
     ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"
 done < <(find "$BIN" -maxdepth 1 -type d -name '*.bundle' -print0)

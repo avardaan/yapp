@@ -39,8 +39,7 @@ choices or requirements change, not for routine implementation changes.
   stay in Keychain. Public downloads need a separate Developer ID/notarization setup.
 - **Product:** company name is always **zeroslop**. Keep the UI quiet and preserve
   input focus. Preserve third-party licenses and attribution.
-- **Changes:** make meaningful local commits on `main`; do not push without being
-  asked. Never commit secrets, signing configuration, models, or build output.
+- **Changes:** make meaningful local commits on `main`; publish only when requested; source, releases, and Pages share `avardaan/yapp`. Never commit secrets, signing configuration, models, or build output.
 - **Models:** benchmark replacements rather than guessing from parameter counts.
   Distinguish download size, process memory, accelerator allocations, and peak use.
   `yapp-bench` is a future direction, not an existing subsystem.
