@@ -12,7 +12,7 @@ h1{font-size:clamp(56px,7vw,88px);line-height:1.02;letter-spacing:-5px;margin:22
 h1 em{font-family:Georgia,serif;font-weight:400}
 p{line-height:1.65}
 .intro{font-size:19px;color:var(--muted);max-width:400px}
-.download{display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap;line-height:1.25;min-height:56px;background:var(--ink);color:white;text-decoration:none;padding:18px 25px;border-radius:12px;font-weight:550;margin-top:24px}
+.download{border:0;appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;gap:8px;justify-content:center;white-space:nowrap;line-height:1.25;min-height:56px;background:var(--ink);color:white;text-decoration:none;padding:18px 25px;border-radius:12px;font-weight:550;margin-top:24px}
 .download:hover{background:#424a37}
 .strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:30px 0;font-size:16px;font-weight:550;color:var(--ink)}
 .strip span{display:flex;align-items:center;justify-content:center;gap:10px;padding:4px 16px;line-height:1.4}
@@ -81,3 +81,5 @@ h2{font-size:32px}}
 .download:disabled{background:var(--ink);opacity:.5;cursor:not-allowed;font-family:inherit;font-size:inherit}
 @media(max-width:760px){.yapping-hero{min-height:320px}}
 @media(prefers-reduced-motion:reduce){.yapping-hero *{animation:none!important}}
+
+.availability-note{font-size:14px;line-height:1.5;color:var(--muted);margin:12px 0 0}

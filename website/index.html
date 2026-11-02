@@ -31,8 +31,12 @@ const unavailable=document.createElement('button');
 unavailable.className=download.className;
 unavailable.type='button';
 unavailable.disabled=true;
-unavailable.textContent='Coming Soon';
+unavailable.textContent='Unsupported device';
+const note=document.createElement('p');
+note.className='availability-note';
+note.textContent='Available on Mac running macOS 14 or later';
 download.replaceWith(unavailable);
+unavailable.after(note);
 }
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 function wireChomp(target,mouth){
