@@ -24,13 +24,13 @@ struct YappMenu: View {
         }
         Menu("Permissions") {
             Text(microphoneStatus)
-            Text(TextInsertion.allowed ? "Text Insertion: Allowed" : "Text Insertion: Not Allowed")
-            Button("Enable Text Insertion…") { TextInsertion.requestPermission() }
-            Button("Accessibility Settings…") {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") { NSWorkspace.shared.open(url) }
-            }
             Button("Microphone Settings…") {
                 guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") else { return }
+                NSWorkspace.shared.open(url)
+            }
+            Text(TextInsertion.allowed ? "Accessibility: Allowed" : "Accessibility: Disabled")
+            Button("Accessibility Settings…") {
+                guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
                 NSWorkspace.shared.open(url)
             }
         }
@@ -44,14 +44,10 @@ struct YappMenu: View {
     }
 
     private var microphoneStatus: String {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized: return "Microphone: Allowed"
-        case .denied: return "Microphone: Denied"
-        case .restricted: return "Microphone: Restricted"
-        case .notDetermined: return "Microphone: Not Requested"
-        @unknown default: return "Microphone: Unknown"
-        }
+        AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+            ? "Microphone: Allowed" : "Microphone: Disabled"
     }
+
 }
 
 extension DictationSession {
