@@ -12,7 +12,7 @@ struct YappApp: App {
         } label: {
             Label { Text("Yapp — \(session.menuStatus)") } icon: { Image(nsImage: YappMark.menuImage(for: session.phase)) }
                 .accessibilityLabel("Yapp — \(session.menuStatus)")
-                .background(StatusItemAnchor())
+                .background(StatusItemAnchor().frame(width: 21, height: 18))
         }
         .menuBarExtraStyle(.menu)
     }

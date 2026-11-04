@@ -32,7 +32,7 @@ final class FirstLaunchGuide {
     func start() {
         guard !CommandLine.arguments.contains("--smoke-audio"),
               !CommandLine.arguments.contains("--about"),
-              !defaults.bool(forKey: completionKey) else { return }
+              (!defaults.bool(forKey: completionKey) || CommandLine.arguments.contains("--show-guide")) else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.showIfReady() }
         }
@@ -41,7 +41,13 @@ final class FirstLaunchGuide {
     private func showIfReady() {
         guard DictationSession.shared.phase == .ready,
               AVCaptureDevice.authorizationStatus(for: .audio) == .authorized,
-              TextInsertion.allowed, let anchor,
+              TextInsertion.allowed else { return }
+        // MenuBarExtra can render its label without hosting the background NSView.
+        // Its own status window still gives the real menu-item bounds.
+        let position = anchor ?? NSApp.windows.first(where: {
+            $0.className.contains("StatusBar") && $0.frame.width > 0 && $0.frame.height <= 50
+        })?.frame
+        guard let anchor = position,
               let targetScreen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return }
         timer?.invalidate(); timer = nil
         for screen in NSScreen.screens {
