@@ -178,6 +178,7 @@ final class FnShortcut: ObservableObject {
         case .pressed:
             logger.info("Shortcut pressed")
             pressedAt = Date()
+            if DictationSession.shared.phase == .ready { FirstLaunchGuide.shared.dismiss() }
             DictationSession.shared.shortcutPressed()
         case .released:
             logger.info("Shortcut released")

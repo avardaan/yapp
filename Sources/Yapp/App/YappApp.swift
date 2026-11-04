@@ -12,6 +12,7 @@ struct YappApp: App {
         } label: {
             Label { Text("Yapp — \(session.menuStatus)") } icon: { Image(nsImage: YappMark.menuImage(for: session.phase)) }
                 .accessibilityLabel("Yapp — \(session.menuStatus)")
+                .background(StatusItemAnchor())
         }
         .menuBarExtraStyle(.menu)
     }
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         ActivityIndicator.shared.start(session: DictationSession.shared)
         if CommandLine.arguments.contains("--about") { AboutPanel.show() }
+        FirstLaunchGuide.shared.start()
         requestLaunchPermissions()
         Task { await DictationSession.shared.prepare() }
     }
@@ -44,6 +46,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        FirstLaunchGuide.shared.shutdown()
         ActivityIndicator.shared.shutdown()
         FnShortcut.shared.shutdown()
         DictationSession.shared.shutdown()
