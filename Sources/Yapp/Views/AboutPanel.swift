@@ -34,7 +34,11 @@ enum AboutPanel {
             .font: NSFont.systemFont(ofSize: 12, weight: .regular),
             .paragraphStyle: paragraph
         ], range: NSRange(location: 0, length: credits.length))
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
         NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationVersion: "\(version)\nBuild \(build)",
+            .version: "",
             .applicationIcon: outlinedIcon,
             .credits: credits
         ])
