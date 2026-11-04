@@ -10,6 +10,8 @@ enum AboutPanel {
             .underlineStyle: NSUnderlineStyle.single.rawValue
         ]))
         credits.append(NSAttributedString(string: "."))
+        credits.addAttribute(.font, value: NSFont.systemFont(ofSize: 13),
+                             range: NSRange(location: 0, length: credits.length))
         NSApp.orderFrontStandardAboutPanel(options: [
             .applicationIcon: YappMark.aboutImage,
             .credits: credits
