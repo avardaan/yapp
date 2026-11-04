@@ -5,6 +5,7 @@ struct YappMenu: View {
     @ObservedObject var session: DictationSession
     @ObservedObject private var shortcut = FnShortcut.shared
     @ObservedObject private var updater = AppUpdater.shared
+    @ObservedObject private var diagnostics = Diagnostics.shared
 
     var body: some View {
         Button("About") { AboutPanel.show() }
@@ -35,10 +36,21 @@ struct YappMenu: View {
             }
         }
         Menu("Advanced") {
-            Button("Show Onboarding") { FirstLaunchGuide.shared.replay() }
-                .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
             Button("Sonoscope…") { }
                 .disabled(true)
+            Menu("Diagnostics") {
+                Menu("Logging") {
+                    Picker("Logging", selection: $diagnostics.mode) {
+                        ForEach(Diagnostics.Mode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                }
+                Button("Export Diagnostics…") { diagnostics.export() }
+            }
+            Button("Show Onboarding") { FirstLaunchGuide.shared.replay() }
+                .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
         }
         Button("Quit") { NSApp.terminate(nil) }
     }

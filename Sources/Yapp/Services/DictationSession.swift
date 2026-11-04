@@ -7,9 +7,14 @@ import OSLog
 final class DictationSession: ObservableObject {
     static let shared = DictationSession()
     enum Phase { case loading, ready, requestingPermission, recording, transcribing, failed }
-    private let logger = Logger(subsystem: "com.zeroslop.yapp", category: "Dictation")
+    private var nextDictation = 0
+    private var activeDictation: Int?
+    private var dictationStarted: TimeInterval = 0
+    private var captureStarted: TimeInterval?
+    private var captureMS: Double = 0
+    private var processingStarted: TimeInterval?
     @Published var phase: Phase = .loading {
-        didSet { if oldValue != phase { logger.info("Phase: \(String(describing: self.phase), privacy: .public)") } }
+        didSet { if oldValue != phase { Diagnostics.shared.record("phase.changed", category: "Dictation", dictation: activeDictation, detail: true, fields: ["phase": String(describing: phase)]) } }
     }
     @Published var status = "Loading English model…"
     @Published var transcript = ""
@@ -25,7 +30,15 @@ final class DictationSession: ObservableObject {
     private var insertionTarget: TextInsertion.Target?
 
     func shortcutPressed() {
-        guard phase == .ready, !shortcutOwnsRecording else { return }
+        guard phase == .ready, !shortcutOwnsRecording else {
+            Diagnostics.shared.record("shortcut.ignored", category: "Shortcut", detail: true, fields: ["reason": shortcutOwnsRecording ? "already_held" : String(describing: phase)])
+            return
+        }
+        nextDictation += 1
+        activeDictation = nextDictation
+        dictationStarted = ProcessInfo.processInfo.systemUptime
+        captureMS = 0; captureStarted = nil; processingStarted = nil
+        trace("dictation.started")
         shortcutOwnsRecording = true
         insertionTarget = TextInsertion.captureTarget()
         // Start on key-down without a hold threshold; keep capture out of the keyboard callback.
@@ -42,6 +55,7 @@ final class DictationSession: ObservableObject {
         shortcutOwnsRecording = false
         if phase == .requestingPermission { cancelRecording() }
         else if phase == .recording { Task { await stop() } }
+        else { finish("cancelled_before_capture") }
     }
 
     func cancelShortcut() {
@@ -54,6 +68,8 @@ final class DictationSession: ObservableObject {
     func prepare() async {
         guard !initialized else { return }
         initialized = true
+        let loadStarted = ProcessInfo.processInfo.systemUptime
+        Diagnostics.shared.record("model.loading", category: "Model")
         do {
             let model = Bundle.main.resourceURL!.appendingPathComponent("Models")
             for name in ["AudioEncoder.mlmodelc", "MelSpectrogram.mlmodelc", "TextDecoder.mlmodelc", "tokenizer.json", "tokenizer_config.json"] {
@@ -61,7 +77,15 @@ final class DictationSession: ObservableObject {
                     throw NSError(domain: "Yapp", code: 1, userInfo: [NSLocalizedDescriptionKey: "Missing bundled model asset: \(name). Run the build script again."])
                 }
             }
-            engine = try await WhisperKit(WhisperKitConfig(modelFolder: model.path, tokenizerFolder: model, download: false))
+            engine = try await WhisperKit(WhisperKitConfig(modelFolder: model.path, tokenizerFolder: model, verbose: false, download: false))
+            Diagnostics.shared.record("model.ready", category: "Model", fields: ["duration_ms": String(Diagnostics.milliseconds(since: loadStarted))])
+            if let timings = engine?.currentTimings {
+                Diagnostics.shared.record("model.stages", category: "Model", detail: true, fields: [
+                    "encoder_ms": String((timings.encoderLoadTime * 1000).rounded()),
+                    "decoder_ms": String((timings.decoderLoadTime * 1000).rounded()),
+                    "tokenizer_ms": String((timings.tokenizerLoadTime * 1000).rounded())
+                ])
+            }
             phase = .ready
             status = "Ready · English · On-device"
             if let index = CommandLine.arguments.firstIndex(of: "--smoke-audio"), CommandLine.arguments.count > index + 1 {
@@ -70,7 +94,10 @@ final class DictationSession: ObservableObject {
                 try text.write(toFile: "/tmp/yapp-smoke-result.txt", atomically: true, encoding: .utf8)
                 NSApp.terminate(nil)
             }
-        } catch { fail(error) }
+        } catch {
+            Diagnostics.shared.record("model.failed", category: "Model", severity: .error, fields: ["duration_ms": String(Diagnostics.milliseconds(since: loadStarted)), "error_code": String((error as NSError).code)])
+            fail(error)
+        }
     }
 
     func start() {
@@ -90,6 +117,7 @@ final class DictationSession: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self, self.phase == .requestingPermission, self.permissionRequest == request else { return }
                 guard granted else {
+                    self.finish("microphone_denied", severity: .error)
                     self.phase = .ready
                     self.status = "Allow microphone access in System Settings → Privacy & Security → Microphone."
                     return
@@ -112,6 +140,8 @@ final class DictationSession: ObservableObject {
             capture.isMeteringEnabled = true
             guard capture.record() else { throw NSError(domain: "Yapp", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not start the microphone."]) }
             recorder = capture
+            captureStarted = ProcessInfo.processInfo.systemUptime
+            trace("capture.started")
             meterTimer?.invalidate()
             meterTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -122,7 +152,10 @@ final class DictationSession: ObservableObject {
             }
             phase = .recording
             status = "Recording · Release shortcut to finish"
-        } catch { cleanup(); phase = .ready; status = error.localizedDescription }
+        } catch {
+            finish("capture_failed", severity: .error, error: error)
+            cleanup(); phase = .ready; status = error.localizedDescription
+        }
     }
 
     func stop() async {
@@ -130,6 +163,10 @@ final class DictationSession: ObservableObject {
         meterTimer?.invalidate(); meterTimer = nil; inputLevel = 0
         recorder?.stop()
         recorder = nil
+        if let captureStarted { captureMS = Diagnostics.milliseconds(since: captureStarted) }
+        captureStarted = nil
+        trace("capture.stopped")
+        processingStarted = ProcessInfo.processInfo.systemUptime
         phase = .transcribing
         status = "Transcribing on your Mac…"
         defer { cleanup() }
@@ -138,23 +175,33 @@ final class DictationSession: ObservableObject {
                 try AudioActivityCheck.hasActivity(at: url)
             }.value
             guard hasActivity else {
+                finish("silence_rejected")
                 transcript = ""
                 phase = .ready
                 status = "No speech detected"
                 return
             }
             let options = DecodingOptions(language: "en", skipSpecialTokens: true, withoutTimestamps: true)
+            trace("transcription.started")
+            let transcriptionStarted = ProcessInfo.processInfo.systemUptime
             let results = try await engine.transcribe(audioPath: url.path, decodeOptions: options)
+            trace("transcription.completed", fields: ["duration_ms": String(Diagnostics.milliseconds(since: transcriptionStarted))])
             transcript = DictationText.clean(results.map(\.text).joined(separator: " "))
             guard !transcript.isEmpty else {
+                finish("empty_or_annotation_rejected")
                 phase = .ready
                 status = "No speech detected"
                 return
             }
-            let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget)
+            trace("insertion.started")
+            let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget, dictation: activeDictation)
+            finish(insertionStatus == nil ? "paste_sent" : "insertion_skipped")
             phase = .ready
             status = insertionStatus ?? "Ready · English · On-device"
-        } catch { phase = .ready; status = error.localizedDescription }
+        } catch {
+            finish("processing_failed", severity: .error, error: error)
+            phase = .ready; status = error.localizedDescription
+        }
     }
 
     func copy() {
@@ -162,7 +209,11 @@ final class DictationSession: ObservableObject {
         NSPasteboard.general.setString(transcript, forType: .string)
     }
     func cancelRecording() {
-        guard phase == .recording || phase == .requestingPermission else { return }
+        guard phase == .recording || phase == .requestingPermission else {
+            finish("cancelled_before_capture"); return
+        }
+        if let captureStarted { captureMS = Diagnostics.milliseconds(since: captureStarted) }
+        finish("cancelled")
         permissionRequest = UUID()
         cleanup()
         phase = .ready
@@ -177,7 +228,31 @@ final class DictationSession: ObservableObject {
         Task { await prepare() }
     }
 
-    func shutdown() { pendingShortcut?.cancel(); cleanup() }
+    func shutdown() {
+        pendingShortcut?.cancel()
+        if let captureStarted { captureMS = Diagnostics.milliseconds(since: captureStarted) }
+        finish("app_terminated")
+        cleanup()
+        if engine != nil {
+            engine = nil
+            Diagnostics.shared.record("model.reference_released", category: "Model")
+        }
+    }
+
+    private func trace(_ event: String, fields: [String: String] = [:]) {
+        Diagnostics.shared.record(event, category: "Dictation", dictation: activeDictation, detail: true, fields: fields)
+    }
+
+    private func finish(_ outcome: String, severity: Diagnostics.Severity = .normal, error: Error? = nil) {
+        guard let id = activeDictation else { return }
+        var fields = ["outcome": outcome,
+                      "duration_ms": String(Diagnostics.milliseconds(since: dictationStarted)),
+                      "capture_ms": String(captureMS)]
+        if let processingStarted { fields["processing_ms"] = String(Diagnostics.milliseconds(since: processingStarted)) }
+        if let error { fields["error_code"] = String((error as NSError).code) }
+        Diagnostics.shared.record("dictation.completed", category: "Dictation", dictation: id, severity: severity, fields: fields)
+        activeDictation = nil
+    }
 
     private func cleanup() {
         meterTimer?.invalidate(); meterTimer = nil; inputLevel = 0

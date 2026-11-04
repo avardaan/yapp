@@ -32,6 +32,7 @@ choices or requirements change, not for routine implementation changes.
   non-secure input. Restore the clipboard only if it has not changed meanwhile.
 - **Session safety:** silence, cancellation, and errors insert nothing. Ignore stale
   permission callbacks; recover from lost key releases without leaving capture active.
+- **Diagnostics:** Standard/Debug verbosity, Apple unified logging, and a bounded current-launch JSONL export. Track each dictation from accepted press to one terminal outcome; release ends capture. Log timings and controlled metadata only. Disable dependency text/token logging in both modes.
 - **Privacy:** no persistent transcript history. Clean up temporary audio on normal
   completion, cancellation, failure, and shutdown. Never log speech, typed text,
   clipboard contents, or secrets. Crash cleanup is not guaranteed.

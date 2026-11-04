@@ -24,6 +24,7 @@ final class FirstLaunchGuide {
     var anchor: NSRect?
     private var panels: [NSPanel] = []
     private var timer: Timer?
+    private var waitingReason: String?
     private var globalEscape: Any?
     private var localEscape: Any?
     private let defaults = UserDefaults.standard
@@ -51,16 +52,23 @@ final class FirstLaunchGuide {
     }
 
     private func showIfReady() {
-        guard DictationSession.shared.phase == .ready,
-              AVCaptureDevice.authorizationStatus(for: .audio) == .authorized,
-              TextInsertion.allowed else { return }
+        let reason: String?
+        if DictationSession.shared.phase != .ready { reason = "model_not_ready" }
+        else if AVCaptureDevice.authorizationStatus(for: .audio) != .authorized { reason = "microphone_permission" }
+        else if !TextInsertion.allowed { reason = "accessibility_permission" }
+        else { reason = nil }
+        if let reason { waiting(reason); return }
         // MenuBarExtra can render its label without hosting the background NSView.
         // Its own status window still gives the real menu-item bounds.
         let position = anchor ?? NSApp.windows.first(where: {
             $0.className.contains("StatusBar") && $0.frame.width > 0 && $0.frame.height <= 50
         })?.frame
         guard let anchor = position,
-              let targetScreen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else { return }
+              let targetScreen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else {
+            waiting("menu_anchor"); return
+        }
+        waitingReason = nil
+        Diagnostics.shared.record("onboarding.shown", category: "Onboarding")
         timer?.invalidate(); timer = nil
         for screen in NSScreen.screens {
             let panel = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -89,8 +97,15 @@ final class FirstLaunchGuide {
         }
     }
 
+    private func waiting(_ reason: String) {
+        guard waitingReason != reason else { return }
+        waitingReason = reason
+        Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", detail: true, fields: ["reason": reason])
+    }
+
     func dismiss() {
         guard !panels.isEmpty else { return }
+        Diagnostics.shared.record("onboarding.completed", category: "Onboarding")
         defaults.set(true, forKey: completionKey)
         shutdown()
     }

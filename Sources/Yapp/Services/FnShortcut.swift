@@ -6,9 +6,8 @@ import OSLog
 final class FnShortcut: ObservableObject {
     static let shared = FnShortcut()
     @Published private(set) var selected: DictationShortcut
-    private let logger = Logger(subsystem: "com.zeroslop.yapp", category: "Shortcut")
     @Published private(set) var status = "Shortcut starting…" {
-        didSet { if oldValue != status { logger.info("Shortcut: \(self.status, privacy: .public)") } }
+        didSet { if oldValue != status { Diagnostics.shared.record("listener.status", category: "Shortcut", fields: ["status": self.status]) } }
     }
     // Keep the proven event-tap backend available for a controlled comparison.
     private let usesAccessibilityListener = !CommandLine.arguments.contains("--input-monitoring-listener")
@@ -115,7 +114,7 @@ final class FnShortcut: ObservableObject {
             status = "Shortcut listener unavailable"
             return
         }
-        logger.info("Accessibility listener attached; Input Monitoring granted: \(CGPreflightListenEventAccess(), privacy: .public)")
+        Diagnostics.shared.record("listener.attached", category: "Shortcut", detail: true, fields: ["backend": "accessibility"])
         status = "Hold \(selected.title) to talk"
     }
 
@@ -176,16 +175,16 @@ final class FnShortcut: ObservableObject {
     private func apply(_ action: ShortcutKeyState.Action?) {
         switch action {
         case .pressed:
-            logger.info("Shortcut pressed")
+            Diagnostics.shared.record("shortcut.pressed", category: "Shortcut", detail: true)
             pressedAt = Date()
             if DictationSession.shared.phase == .ready { FirstLaunchGuide.shared.dismiss() }
             DictationSession.shared.shortcutPressed()
         case .released:
-            logger.info("Shortcut released")
+            Diagnostics.shared.record("shortcut.released", category: "Shortcut", detail: true)
             pressedAt = nil
             DictationSession.shared.shortcutReleased()
         case .cancelled:
-            logger.info("Shortcut cancelled")
+            Diagnostics.shared.record("shortcut.cancelled", category: "Shortcut", detail: true)
             pressedAt = nil
             DictationSession.shared.cancelShortcut()
         case nil: break

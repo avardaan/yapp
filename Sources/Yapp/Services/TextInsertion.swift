@@ -36,11 +36,11 @@ final class TextInsertion {
 
     // Return nil after sending Paste, or an explanatory status if insertion is unsafe or unavailable.
     // Never paste into a field/app the user switched to during transcription.
-    static func insert(_ text: String, into target: Target?) async -> String? {
+    static func insert(_ text: String, into target: Target?, dictation: Int? = nil) async -> String? {
         let text = DictationText.clean(text)
-        guard !text.isEmpty else { return "No speech detected" }
-        guard allowed else { return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
-        guard let target, stillFocused(target) else { return "Input focus changed; use Copy Last Transcript." }
+        guard !text.isEmpty else { log("empty_text", dictation: dictation); return "No speech detected" }
+        guard allowed else { log("accessibility_missing", dictation: dictation); return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
+        guard let target, stillFocused(target) else { log(target == nil ? "no_safe_target" : "focus_changed", dictation: dictation); return "Input focus changed; use Copy Last Transcript." }
         // AXSelectedText writes can report success without producing editor
         // input events (notably in web/Electron editors). Use the normal Paste
         // command so the target app handles text through its regular input path.
@@ -54,6 +54,7 @@ final class TextInsertion {
         guard stillFocused(target),
               let down = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: false) else {
+            log("focus_or_event_unavailable", dictation: dictation)
             return "Could not insert; use Copy Last Transcript."
         }
         clipboard.clearContents()
@@ -62,14 +63,20 @@ final class TextInsertion {
         down.flags = .maskCommand
         up.flags = .maskCommand
         guard stillFocused(target) else {
+            log("focus_changed", dictation: dictation)
             restoreClipboard(saved, ifUnchanged: revision)
             return "Input focus changed; use Copy Last Transcript."
         }
+        log("paste_dispatched", dictation: dictation)
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         try? await Task.sleep(for: .milliseconds(350))
         restoreClipboard(saved, ifUnchanged: revision)
         return nil
+    }
+
+    private static func log(_ outcome: String, dictation: Int?) {
+        Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, detail: true, fields: ["outcome": outcome])
     }
 
     private static func restoreClipboard(_ saved: [[NSPasteboard.PasteboardType: Data]], ifUnchanged revision: Int) {
