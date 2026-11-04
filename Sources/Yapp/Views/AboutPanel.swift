@@ -3,7 +3,7 @@ import AppKit
 @MainActor
 enum AboutPanel {
     static func show() {
-        let credits = NSMutableAttributedString(string: "Private, offline dictation.\n\nMade by ")
+        let credits = NSMutableAttributedString(string: "Private, offline dictation.\n\nCrafted with care by ")
         credits.append(NSAttributedString(string: "Vardaan", attributes: [
             .link: URL(string: "https://github.com/avardaan")!,
             .foregroundColor: NSColor.linkColor,
