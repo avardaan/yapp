@@ -26,7 +26,8 @@ struct ActivityIndicatorView: View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 60.0)) { timeline in
             let tick = timeline.date.timeIntervalSinceReferenceDate
             let processing = session.phase == .transcribing
-            let opening = reduceMotion ? 25 : 12 + (sin(tick * 9) + 1) * 12
+            let preparing = session.waitingForModel && session.phase != .recording && !processing
+            let opening = reduceMotion || preparing ? 25 : 12 + (sin(tick * 9) + 1) * 12
             HStack(spacing: 10) {
                 PacmanMark(opening: opening)
                     .fill(gold).frame(width: 15, height: 15)
@@ -38,8 +39,9 @@ struct ActivityIndicatorView: View {
                                 .frame(width: 3, height: 14)
                         } else {
                             let weight = 1 - abs(Double(index - 3)) / 5
-                            Capsule().fill(gold.opacity(0.78))
-                                .frame(width: 3, height: 3 + CGFloat(session.inputLevel * weight) * 12)
+                            let preparationLevel = reduceMotion ? 0.35 : (sin(tick * 5 - Double(index) * 0.7) + 1) * 0.3
+                            Capsule().fill(gold.opacity(preparing ? 0.55 : 0.78))
+                                .frame(width: 3, height: 3 + CGFloat((preparing ? preparationLevel : session.inputLevel) * weight) * 12)
                                 .frame(height: 15)
                         }
                     }
@@ -49,7 +51,8 @@ struct ActivityIndicatorView: View {
             .background(Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255).opacity(0.99), in: Capsule())
             .overlay(Capsule().strokeBorder(.white.opacity(0.03), lineWidth: 0.5))
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(processing ? "Yapp transcribing" : "Yapp recording")
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: preparing)
+            .accessibilityLabel(preparing ? "Yapp preparing dictation" : processing ? "Yapp transcribing" : "Yapp recording")
         }
     }
 }

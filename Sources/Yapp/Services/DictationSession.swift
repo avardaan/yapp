@@ -19,6 +19,7 @@ final class DictationSession: ObservableObject {
     @Published var status = "Loading English model…"
     @Published var transcript = ""
     @Published var inputLevel: Double = 0
+    @Published private(set) var waitingForModel = false
     private var meterTimer: Timer?
     private var engine: WhisperKit?
     private var recorder: AVAudioRecorder?
@@ -30,7 +31,7 @@ final class DictationSession: ObservableObject {
     private var insertionTarget: TextInsertion.Target?
 
     func shortcutPressed() {
-        guard phase == .ready, !shortcutOwnsRecording else {
+        guard (phase == .ready || phase == .loading), !shortcutOwnsRecording else {
             Diagnostics.shared.record("shortcut.ignored", category: "Shortcut", detail: true, fields: ["reason": shortcutOwnsRecording ? "already_held" : String(describing: phase)])
             return
         }
@@ -41,11 +42,22 @@ final class DictationSession: ObservableObject {
         trace("dictation.started")
         shortcutOwnsRecording = true
         insertionTarget = TextInsertion.captureTarget()
-        // Start on key-down without a hold threshold; keep capture out of the keyboard callback.
+        if phase == .loading {
+            waitingForModel = true
+            trace("dictation.waiting_for_model")
+            return
+        }
+        scheduleShortcutStart()
+    }
+
+    private func scheduleShortcutStart() {
+        // Keep capture out of keyboard callbacks and allow a release to cancel startup.
         pendingShortcut = Task { [weak self] in
             guard !Task.isCancelled else { return }
             guard let self, self.shortcutOwnsRecording, self.phase == .ready else { return }
+            FirstLaunchGuide.shared.completeFromShortcut()
             self.start()
+            self.waitingForModel = false
         }
     }
 
@@ -53,6 +65,7 @@ final class DictationSession: ObservableObject {
         guard shortcutOwnsRecording else { return }
         pendingShortcut?.cancel(); pendingShortcut = nil
         shortcutOwnsRecording = false
+        waitingForModel = false
         if phase == .requestingPermission { cancelRecording() }
         else if phase == .recording { Task { await stop() } }
         else { finish("cancelled_before_capture") }
@@ -62,6 +75,7 @@ final class DictationSession: ObservableObject {
         guard shortcutOwnsRecording else { return }
         pendingShortcut?.cancel(); pendingShortcut = nil
         shortcutOwnsRecording = false
+        waitingForModel = false
         cancelRecording()
     }
 
@@ -86,8 +100,7 @@ final class DictationSession: ObservableObject {
                     "tokenizer_ms": String((timings.tokenizerLoadTime * 1000).rounded())
                 ])
             }
-            phase = .ready
-            status = "Ready · English · On-device"
+            modelBecameReady()
             if let index = CommandLine.arguments.firstIndex(of: "--smoke-audio"), CommandLine.arguments.count > index + 1 {
                 let results = try await engine!.transcribe(audioPath: CommandLine.arguments[index + 1], decodeOptions: DecodingOptions(language: "en", skipSpecialTokens: true, withoutTimestamps: true))
                 let text = results.map(\.text).joined(separator: " ")
@@ -98,6 +111,13 @@ final class DictationSession: ObservableObject {
             Diagnostics.shared.record("model.failed", category: "Model", severity: .error, fields: ["duration_ms": String(Diagnostics.milliseconds(since: loadStarted)), "error_code": String((error as NSError).code)])
             fail(error)
         }
+    }
+
+    /// A pending hold may continue only while it is still owned by the shortcut.
+    func modelBecameReady() {
+        phase = .ready
+        status = "Ready · English · On-device"
+        if waitingForModel && shortcutOwnsRecording { scheduleShortcutStart() }
     }
 
     func start() {
@@ -230,6 +250,8 @@ final class DictationSession: ObservableObject {
 
     func shutdown() {
         pendingShortcut?.cancel()
+        waitingForModel = false
+        shortcutOwnsRecording = false
         if let captureStarted { captureMS = Diagnostics.milliseconds(since: captureStarted) }
         finish("app_terminated")
         cleanup()
@@ -261,5 +283,10 @@ final class DictationSession: ObservableObject {
         audioURL = nil
         insertionTarget = nil
     }
-    private func fail(_ error: Error) { phase = .failed; status = error.localizedDescription }
+    private func fail(_ error: Error) {
+        waitingForModel = false
+        shortcutOwnsRecording = false
+        finish("model_failed", severity: .error, error: error)
+        phase = .failed; status = error.localizedDescription
+    }
 }

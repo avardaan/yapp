@@ -7,6 +7,8 @@ choices or requirements change, not for routine implementation changes.
 
 - Native macOS menu-bar app: SwiftUI UI with small AppKit bridges. No Dock icon
   or main window; a nonactivating activity bar and standard About dialog are allowed.
+- Holding the shortcut during model loading shows an indeterminate preparation pill;
+  continue into recording only if still held when ready. Early release cancels.
 - Flow: hold shortcut → capture focused input → record audio → release → reject
   near-silence → transcribe locally → filter non-speech labels → validate focus
   → paste → delete temporary audio.

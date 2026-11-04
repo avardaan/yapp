@@ -9,16 +9,29 @@ final class ActivityIndicator {
     private var observation: AnyCancellable?
     private var sound: NSSound?
 
-    func start(session: DictationSession) {
-        guard !CommandLine.arguments.contains("--smoke-audio") else { return }
-        observation = session.$phase.removeDuplicates().sink { [weak self, weak session] phase in
-            guard let self, let session else { return }
-            self.update(phase: phase, session: session)
+    enum Presentation: Equatable {
+        case hidden, preparing, recording, transcribing
+        static func resolve(phase: DictationSession.Phase, waiting: Bool) -> Self {
+            if phase == .recording { return .recording }
+            if phase == .transcribing { return .transcribing }
+            if waiting { return .preparing }
+            return .hidden
         }
     }
 
-    private func update(phase: DictationSession.Phase, session: DictationSession) {
-        guard phase == .recording || phase == .transcribing else {
+    func start(session: DictationSession) {
+        guard !CommandLine.arguments.contains("--smoke-audio") else { return }
+        observation = session.$phase.combineLatest(session.$waitingForModel)
+            .map { Presentation.resolve(phase: $0, waiting: $1) }
+            .removeDuplicates()
+            .sink { [weak self, weak session] presentation in
+                guard let self, let session else { return }
+                self.update(presentation: presentation, session: session)
+            }
+    }
+
+    private func update(presentation: Presentation, session: DictationSession) {
+        guard presentation != .hidden else {
             panel?.orderOut(nil)
             return
         }
@@ -37,13 +50,14 @@ final class ActivityIndicator {
             panel.contentView = NSHostingView(rootView: ActivityIndicatorView(session: session).padding(4))
             self.panel = panel
         }
-        if phase == .recording, let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
+        if panel?.isVisible != true, let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
             let visible = screen.visibleFrame
             panel?.setFrameOrigin(NSPoint(x: visible.midX - 52, y: visible.minY + 14))
         }
         panel?.orderFrontRegardless()
         sound?.stop()
-        sound = NSSound(named: NSSound.Name(phase == .recording ? "Tink" : "Pop"))
+        guard presentation == .recording || presentation == .transcribing else { return }
+        sound = NSSound(named: NSSound.Name(presentation == .recording ? "Tink" : "Pop"))
         sound?.volume = 0.18
         sound?.play()
     }

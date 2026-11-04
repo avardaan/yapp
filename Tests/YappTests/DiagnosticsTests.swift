@@ -53,13 +53,15 @@ final class DiagnosticsTests: XCTestCase {
     }
 
     @MainActor
-    func testPressDuringLoadingDoesNotCreateDictation() {
+    func testPressDuringLoadingCompletesCancelledDictation() {
         let diagnostics = Diagnostics.shared
         let before = diagnostics.events.count
         let session = DictationSession()
         session.shortcutPressed()
         session.shortcutReleased()
         session.shutdown()
-        XCTAssertFalse(diagnostics.events.dropFirst(before).contains { $0.event == "dictation.completed" })
+        let completed = diagnostics.events.dropFirst(before).filter { $0.event == "dictation.completed" }
+        XCTAssertEqual(completed.count, 1)
+        XCTAssertEqual(completed.first?.fields["outcome"], "cancelled_before_capture")
     }
 }

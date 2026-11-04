@@ -16,7 +16,7 @@ enum YappMark {
             path.appendArc(withCenter: center, radius: 8, startAngle: opening, endAngle: 360 - opening, clockwise: false)
             path.close()
             path.fill()
-            if phase == .transcribing || phase == .loading {
+            if phase == .transcribing {
                 NSBezierPath(ovalIn: NSRect(x: 17, y: 7.5, width: 3, height: 3)).fill()
             } else if phase == .recording {
                 NSBezierPath(ovalIn: NSRect(x: 17, y: 7, width: 4, height: 4)).fill()

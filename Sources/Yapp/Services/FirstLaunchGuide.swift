@@ -103,6 +103,14 @@ final class FirstLaunchGuide {
         Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", detail: true, fields: ["reason": reason])
     }
 
+    /// Starting dictation also consumes a guide that is still waiting to appear.
+    func completeFromShortcut() {
+        guard timer != nil || !panels.isEmpty else { return }
+        Diagnostics.shared.record("onboarding.completed", category: "Onboarding", fields: ["reason": "dictation_started"])
+        defaults.set(true, forKey: completionKey)
+        shutdown()
+    }
+
     func dismiss() {
         guard !panels.isEmpty else { return }
         Diagnostics.shared.record("onboarding.completed", category: "Onboarding")
