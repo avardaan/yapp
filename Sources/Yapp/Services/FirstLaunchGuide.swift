@@ -33,6 +33,18 @@ final class FirstLaunchGuide {
         guard !CommandLine.arguments.contains("--smoke-audio"),
               !CommandLine.arguments.contains("--about"),
               (!defaults.bool(forKey: completionKey) || CommandLine.arguments.contains("--show-guide")) else { return }
+        schedulePresentation()
+    }
+
+    /// Replay without clearing preferences or permission grants.
+    func replay() {
+        shutdown()
+        schedulePresentation()
+    }
+
+    private func schedulePresentation() {
+        timer?.invalidate()
+        // Let the menu close before presenting the guide.
         timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.showIfReady() }
         }

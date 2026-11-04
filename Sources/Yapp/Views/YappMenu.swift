@@ -43,6 +43,12 @@ struct YappMenu: View {
                 NSWorkspace.shared.open(url)
             }
         }
+        Menu("Advanced") {
+            Button("Show Onboarding") { FirstLaunchGuide.shared.replay() }
+                .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
+            Button("Sonoscope…") { }
+                .disabled(true)
+        }
         Button("Quit") { NSApp.terminate(nil) }
     }
 
