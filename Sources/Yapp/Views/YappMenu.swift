@@ -45,6 +45,7 @@ struct YappMenu: View {
                     }
                 }
                 .pickerStyle(.inline)
+                .labelsHidden()
             }
             Button("Show Onboarding") { FirstLaunchGuide.shared.replay() }
                 .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
