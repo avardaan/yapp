@@ -11,15 +11,6 @@ struct YappMenu: View {
         Button("Check for Updates…") { updater.checkForUpdates() }
             .disabled(!updater.canCheckForUpdates || session.phase == .recording || session.phase == .transcribing)
         Divider()
-        Menu("Status") {
-            ForEach(Array(statusLines.enumerated()), id: \.offset) { _, line in
-                Text(line)
-            }
-            Button("Copy Status Details") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(session.status, forType: .string)
-            }
-        }
         Menu("Shortcut") {
             Text("\(shortcut.selected.title) · Hold to talk")
             Menu("Change Shortcut…") {
@@ -50,18 +41,6 @@ struct YappMenu: View {
                 .disabled(true)
         }
         Button("Quit") { NSApp.terminate(nil) }
-    }
-
-    // Long errors stay accessible inside the menu; no auxiliary windows.
-    private var statusLines: [String] {
-        var remaining = session.status[...]
-        var lines: [String] = []
-        while !remaining.isEmpty {
-            let end = remaining.index(remaining.startIndex, offsetBy: min(30, remaining.count))
-            lines.append(String(remaining[..<end]))
-            remaining = remaining[end...]
-        }
-        return lines
     }
 
     private var microphoneStatus: String {
