@@ -5,13 +5,15 @@ enum AboutPanel {
     // Give the charcoal tile a quiet edge against the About panel in either appearance.
     private static var outlinedIcon: NSImage {
         let base = YappMark.aboutImage
-        return NSImage(size: NSSize(width: 128, height: 128), flipped: false) { rect in
+        return NSImage(size: NSSize(width: 1024, height: 1024), flipped: false) { rect in
+            NSGraphicsContext.current?.imageInterpolation = .high
+            NSGraphicsContext.current?.shouldAntialias = true
             base.draw(in: rect)
             // Match the approved icon vector's tile bounds and corner radius.
-            let tile = NSRect(x: 9.5, y: 9.5, width: 109, height: 109)
-            let outline = NSBezierPath(roundedRect: tile, xRadius: 24.375, yRadius: 24.375)
-            NSColor.labelColor.withAlphaComponent(0.18).setStroke()
-            outline.lineWidth = 0.75
+            let tile = NSRect(x: 77, y: 77, width: 870, height: 870)
+            let outline = NSBezierPath(roundedRect: tile, xRadius: 194, yRadius: 194)
+            NSColor.labelColor.withAlphaComponent(0.12).setStroke()
+            outline.lineWidth = 5
             outline.stroke()
             return true
         }
