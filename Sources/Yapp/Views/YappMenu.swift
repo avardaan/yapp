@@ -38,16 +38,13 @@ struct YappMenu: View {
         Menu("Advanced") {
             Button("Sonoscope…") { }
                 .disabled(true)
-            Menu("Diagnostics") {
-                Menu("Logging") {
-                    Picker("Logging", selection: $diagnostics.mode) {
-                        ForEach(Diagnostics.Mode.allCases) { mode in
-                            Text(mode.title).tag(mode)
-                        }
+            Menu("Logging") {
+                Picker("Logging", selection: $diagnostics.mode) {
+                    ForEach(Diagnostics.Mode.allCases) { mode in
+                        Text(mode.title).tag(mode)
                     }
-                    .pickerStyle(.inline)
                 }
-                Button("Export Diagnostics…") { diagnostics.export() }
+                .pickerStyle(.inline)
             }
             Button("Show Onboarding") { FirstLaunchGuide.shared.replay() }
                 .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
