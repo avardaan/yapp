@@ -10,7 +10,7 @@ struct YappApp: App {
         MenuBarExtra {
             YappMenu(session: session)
         } label: {
-            Label { Text("Yapp — \(session.menuStatus)") } icon: { Image(nsImage: YappMark.menuImage(for: session.phase)) }
+            Label { Text("Yapp — \(session.menuStatus)") } icon: { Image(nsImage: YappMark.menuImage(for: session.phase, shortcutHeld: session.shortcutOwnsRecording)) }
                 .accessibilityLabel("Yapp — \(session.menuStatus)")
                 .background(StatusItemAnchor().frame(width: 21, height: 18))
         }

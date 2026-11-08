@@ -6,16 +6,30 @@ enum YappMark {
         NSImage(named: "Yapp") ?? NSApp.applicationIconImage
     }
 
-    static func menuImage(for phase: DictationSession.Phase) -> NSImage {
+    static func menuImage(for phase: DictationSession.Phase, shortcutHeld: Bool = false) -> NSImage {
         let image = NSImage(size: NSSize(width: 21, height: 18), flipped: false) { rect in
             NSColor.labelColor.setFill()
             let center = NSPoint(x: 8.5, y: 9)
-            let path = NSBezierPath()
-            path.move(to: center)
-            let opening: CGFloat = phase == .recording ? 42 : 28
-            path.appendArc(withCenter: center, radius: 8, startAngle: opening, endAngle: 360 - opening, clockwise: false)
-            path.close()
-            path.fill()
+            if shortcutHeld {
+                let mouth = NSBezierPath()
+                mouth.move(to: center)
+                mouth.appendArc(withCenter: center, radius: 8, startAngle: 28, endAngle: 332, clockwise: false)
+                mouth.close()
+                mouth.fill()
+            } else {
+                NSBezierPath(ovalIn: NSRect(x: center.x - 8, y: center.y - 8, width: 16, height: 16)).fill()
+                // Cut a fine mouth slit into the template alpha so it adapts to
+                // light/dark menu bars and the menu item's selected appearance.
+                NSGraphicsContext.saveGraphicsState()
+                NSGraphicsContext.current?.compositingOperation = .clear
+                let mouth = NSBezierPath()
+                mouth.move(to: center)
+                mouth.line(to: NSPoint(x: center.x + 8.5, y: center.y))
+                mouth.lineWidth = 1.1
+                mouth.lineCapStyle = .round
+                mouth.stroke()
+                NSGraphicsContext.restoreGraphicsState()
+            }
             if phase == .transcribing {
                 NSBezierPath(ovalIn: NSRect(x: 17, y: 7.5, width: 3, height: 3)).fill()
             } else if phase == .recording {

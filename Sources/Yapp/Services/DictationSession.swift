@@ -26,7 +26,7 @@ final class DictationSession: ObservableObject {
     private var audioURL: URL?
     private var initialized = false
     private var permissionRequest = UUID()
-    private var shortcutOwnsRecording = false
+    @Published private(set) var shortcutOwnsRecording = false
     private var pendingShortcut: Task<Void, Never>?
     private var insertionTarget: TextInsertion.Target?
 
