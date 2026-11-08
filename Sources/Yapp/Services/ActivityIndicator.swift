@@ -54,6 +54,8 @@ final class ActivityIndicator {
             let visible = screen.visibleFrame
             panel?.setFrameOrigin(NSPoint(x: visible.midX - 52, y: visible.minY + 14))
         }
+        panel?.level = FirstLaunchGuide.shared.practiceID != nil
+            ? NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 2) : .floating
         panel?.orderFrontRegardless()
         sound?.stop()
         guard presentation == .recording || presentation == .transcribing else { return }

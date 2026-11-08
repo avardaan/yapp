@@ -29,6 +29,7 @@ final class DictationSession: ObservableObject {
     @Published private(set) var shortcutOwnsRecording = false
     private var pendingShortcut: Task<Void, Never>?
     private var insertionTarget: TextInsertion.Target?
+    private var tutorialID: UUID?
 
     func shortcutPressed() {
         guard (phase == .ready || phase == .loading), !shortcutOwnsRecording else {
@@ -41,7 +42,8 @@ final class DictationSession: ObservableObject {
         captureMS = 0; captureStarted = nil; processingStarted = nil
         trace("dictation.started")
         shortcutOwnsRecording = true
-        insertionTarget = TextInsertion.captureTarget()
+        tutorialID = FirstLaunchGuide.shared.practiceID
+        insertionTarget = tutorialID == nil ? TextInsertion.captureTarget() : nil
         if phase == .loading {
             waitingForModel = true
             trace("dictation.waiting_for_model")
@@ -213,6 +215,14 @@ final class DictationSession: ObservableObject {
                 status = "No speech detected"
                 return
             }
+            if let tutorialID {
+                let delivered = FirstLaunchGuide.shared.practice.receive(transcript, for: tutorialID)
+                finish(delivered ? "tutorial_displayed" : "tutorial_closed")
+                transcript = ""
+                phase = .ready
+                status = "Ready · English · On-device"
+                return
+            }
             trace("insertion.started")
             let insertionStatus = await TextInsertion.insert(transcript, into: insertionTarget, dictation: activeDictation)
             finish(insertionStatus == nil ? "paste_sent" : "insertion_skipped")
@@ -238,6 +248,13 @@ final class DictationSession: ObservableObject {
         cleanup()
         phase = .ready
         status = "Recording discarded"
+    }
+
+    func cancelTutorial(id: UUID) {
+        guard tutorialID == id else { return }
+        // Processing can finish locally, but its invalidated tutorial token prevents delivery.
+        if phase != .transcribing { cancelShortcut() }
+        transcript = ""
     }
 
     func retryLoading() {
@@ -282,6 +299,7 @@ final class DictationSession: ObservableObject {
         if let audioURL { try? FileManager.default.removeItem(at: audioURL) }
         audioURL = nil
         insertionTarget = nil
+        tutorialID = nil
     }
     private func fail(_ error: Error) {
         waitingForModel = false

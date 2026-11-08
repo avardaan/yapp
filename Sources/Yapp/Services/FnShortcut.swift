@@ -177,7 +177,6 @@ final class FnShortcut: ObservableObject {
         case .pressed:
             Diagnostics.shared.record("shortcut.pressed", category: "Shortcut", detail: true)
             pressedAt = Date()
-            if DictationSession.shared.phase == .ready { FirstLaunchGuide.shared.dismiss() }
             DictationSession.shared.shortcutPressed()
         case .released:
             Diagnostics.shared.record("shortcut.released", category: "Shortcut", detail: true)
