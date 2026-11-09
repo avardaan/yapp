@@ -47,6 +47,7 @@ struct YappMenu: View {
                     openWindow(id: DiagnosticsSharingView.windowID)
                     NSApp.activate(ignoringOtherApps: true)
                 }
+                .disabled(true)
             }
             Button("Show Tutorial") { FirstLaunchGuide.shared.replay() }
         }
