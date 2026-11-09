@@ -18,4 +18,23 @@ final class TutorialPracticeTests: XCTestCase {
         XCTAssertFalse(practice.receive("Late result.", for: id))
         XCTAssertTrue(practice.text.isEmpty)
     }
+
+    /// Fresh installs and updates from pre-tutorial releases (no completion flag) get the
+    /// tutorial on launch; anyone who finished it does not; Show Tutorial always works.
+    @MainActor
+    func testTutorialShowsUntilCompletedAndReplayAlwaysWorks() {
+        let name = "YappTutorialTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let guide = FirstLaunchGuide(defaults: defaults)
+        guide.start()
+        XCTAssertTrue(guide.isPending)
+        guide.shutdown()
+        defaults.set(true, forKey: "completedFirstLaunchGuide")
+        guide.start()
+        XCTAssertFalse(guide.isPending)
+        guide.replay()
+        XCTAssertTrue(guide.isPending)
+        guide.shutdown()
+    }
 }
