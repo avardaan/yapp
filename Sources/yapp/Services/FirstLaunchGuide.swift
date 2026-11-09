@@ -253,8 +253,7 @@ final class GuideCanvas: NSView {
     private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
     private var instructionFrame: NSRect {
         if stage == .preparing { return NSRect(x: practiceBox.minX, y: bounds.midY - 32, width: practiceBox.width, height: 64) }
-        let height: CGFloat = stage == .listening ? 92 : 64
-        return NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: height)
+        return NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: 64)
     }
     private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty, hasPrepared: practice.isPrepared) }
 
@@ -295,16 +294,20 @@ final class GuideCanvas: NSView {
             NSRect(x: practiceBox.minX + 20, y: practiceBox.maxY - 44, width: 1.5, height: 25).fill()
         }
 
-        if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
-            // The instructions stay above the box; loop around its left side down to the floaty.
-            // Start just before the "yappman's listening…" caption below the instructions.
-            let title = ("yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 16)])
-            let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.minY + 20)
-            let side = max(practiceBox.minX - 200, bounds.minX + 24)
-            let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
-            drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: side, y: start.y),
-                      control2: NSPoint(x: side, y: tip.y - 10))
+        if stage == .listening {
+            // Instructions stay above the box; the caption sits below it and points down to the floaty.
+            let caption = "yappman’s listening…"
+            let width = (caption as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 16)]).width
+            let label = NSRect(x: practiceBox.midX - width / 2 - 4, y: practiceBox.minY - 46, width: width + 8, height: 24)
+            drawText(caption, rect: label, size: 16, color: NSColor.white.withAlphaComponent(0.75))
+            if let frame = floatyFrame, bounds.intersects(frame) {
+                let start = NSPoint(x: label.minX - 8, y: label.midY)
+                let side = max(label.minX - 140, bounds.minX + 24)
+                let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
+                drawArrow(from: start, to: tip,
+                          control1: NSPoint(x: side, y: start.y),
+                          control2: NSPoint(x: side, y: tip.y - 10))
+            }
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
@@ -366,18 +369,15 @@ private struct TutorialInstruction: View {
             } else if stage == .processing {
                 Text("Transcribing…").font(.system(size: 22, weight: .medium))
             } else if stage == .listening {
-                VStack(spacing: 12) {
-                    HStack(spacing: 8) {
-                        Text("While holding")
-                        TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
-                        Text("start speaking and release")
-                        TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
-                        Text("when you’re done.")
-                    }
-                    .font(.system(size: 17, weight: .medium))
-                    .fixedSize()
-                    Text("yappman’s listening…").font(.system(size: 16)).foregroundStyle(.white.opacity(0.75))
+                HStack(spacing: 8) {
+                    Text("While holding")
+                    TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
+                    Text("start speaking and release")
+                    TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
+                    Text("when you’re done.")
                 }
+                .font(.system(size: 17, weight: .medium))
+                .fixedSize()
             } else {
                 HStack(spacing: 12) {
                     Text(stage == .result ? "Hold" : "To use, press and hold")
