@@ -296,13 +296,13 @@ final class GuideCanvas: NSView {
         }
 
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
-            // The instructions stay above the box; loop around its right side down to the floaty.
-            let side = min(practiceBox.maxX + 56, bounds.maxX - 16)
-            let start = NSPoint(x: practiceBox.maxX + 8, y: instructionFrame.maxY - 16)
-            let tip = NSPoint(x: frame.maxX + 8, y: frame.midY + 6)
+            // The instructions stay above the box; loop around its left side down to the floaty.
+            let side = max(practiceBox.minX - 56, bounds.minX + 16)
+            let start = NSPoint(x: practiceBox.minX - 8, y: instructionFrame.maxY - 16)
+            let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: side + 40, y: start.y),
-                      control2: NSPoint(x: side + 30, y: tip.y + 10))
+                      control1: NSPoint(x: side - 40, y: start.y),
+                      control2: NSPoint(x: side - 30, y: tip.y + 10))
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
