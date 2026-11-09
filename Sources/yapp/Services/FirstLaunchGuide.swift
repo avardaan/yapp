@@ -419,7 +419,7 @@ private struct TutorialKeyVisual: View {
     private let gold = Color(red: 244 / 255, green: 178 / 255, blue: 65 / 255)
 
     var body: some View {
-        key.scaleEffect(compact ? 0.72 : 1).frame(width: compact ? 36 : 50, height: compact ? 33 : 45)
+        key.frame(width: 50, height: 45)
     }
 
     @ViewBuilder private var key: some View {
