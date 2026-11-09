@@ -348,7 +348,7 @@ private struct TutorialInstruction: View {
                 Text("Transcribing on your Mac…").font(.system(size: 22, weight: .medium))
             } else {
                 HStack(spacing: 12) {
-                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "To use Yapp, press and hold")
+                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "To use, press and hold")
                     TutorialKeyVisual(session: session, shortcut: shortcut)
                     if stage == .result { Text("to try again") }
                 }
