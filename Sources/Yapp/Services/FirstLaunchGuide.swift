@@ -250,11 +250,11 @@ final class GuideCanvas: NSView {
         outputScroll.frame = practiceBox.insetBy(dx: 20, dy: 18)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
         instruction.frame = NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: 64)
-        closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 112, width: practiceBox.width, height: 18)
+        closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 132, width: practiceBox.width, height: 18)
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.black.withAlphaComponent(0.84).setFill()
+        NSColor.black.withAlphaComponent(0.90).setFill()
         bounds.fill()
         guard isPrimary else { return }
         if (stage == .prompt || stage == .preparing), let icon = menuBarIcon, bounds.intersects(icon) {
@@ -284,20 +284,20 @@ final class GuideCanvas: NSView {
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
             let label = NSRect(x: min(max(24, frame.midX - 190), bounds.maxX - 404),
                                y: min(frame.maxY + 60, practiceBox.minY - 54), width: 380, height: 44)
-            drawText("Yappman’s listening.", rect: label, size: 18, weight: .medium)
-            drawText("Speak, then release to transcribe.", rect: label.offsetBy(dx: 0, dy: -24), size: 14,
+            drawText("Yappman’s listening…", rect: label, size: 18, weight: .medium)
+            drawText("Speak, then release when you’re done.", rect: label.offsetBy(dx: 0, dy: -24), size: 14,
                      color: .white.withAlphaComponent(0.65))
             let start = NSPoint(x: label.midX + 35, y: label.minY - 12)
             let tip = NSPoint(x: frame.midX, y: frame.maxY + 7)
             drawArrow(from: start, to: tip,
                       control1: NSPoint(x: start.x, y: tip.y + 24), control2: NSPoint(x: tip.x, y: tip.y + 25))
         } else if stage == .result {
-            let text = "That’s your voice, in text."
-            let labelWidth = ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4
+            let text = "Transcribed text appears in the active text input"
+            let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
             if practiceBox.minX >= labelWidth + 80 {
                 // Put the explanation beside the first line, with a short connector.
                 let tip = NSPoint(x: practiceBox.minX + 12, y: practiceBox.maxY - 33)
-                let label = NSRect(x: practiceBox.minX - labelWidth - 55, y: tip.y - 13, width: labelWidth, height: 26)
+                let label = NSRect(x: practiceBox.minX - labelWidth - 55, y: tip.y - 27, width: labelWidth, height: 54)
                 drawText(text, rect: label, size: 18, weight: .medium)
                 let start = NSPoint(x: label.maxX + 10, y: label.midY)
                 drawArrow(from: start, to: tip,
@@ -305,7 +305,7 @@ final class GuideCanvas: NSView {
                           control2: NSPoint(x: tip.x - 18, y: tip.y - 8))
             } else {
                 // Narrow screens use a compact upward arrow rather than an offscreen loop.
-                let label = NSRect(x: practiceBox.midX - labelWidth / 2, y: practiceBox.minY - 76, width: labelWidth, height: 26)
+                let label = NSRect(x: practiceBox.midX - labelWidth / 2, y: practiceBox.minY - 94, width: labelWidth, height: 54)
                 drawText(text, rect: label, size: 18, weight: .medium)
                 let start = NSPoint(x: label.midX, y: label.maxY + 8)
                 let tip = NSPoint(x: practiceBox.midX, y: practiceBox.minY - 8)
