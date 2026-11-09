@@ -39,7 +39,11 @@ struct YappMenu: View {
             Button("Show Sonoscope") { }
                 .disabled(true)
             Menu("Diagnostics") {
-                Button("Sharing…") {
+                Button("Show Log") {
+                    openWindow(id: DiagnosticsLogView.windowID)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                Button("Share Diagnostics…") {
                     openWindow(id: DiagnosticsSharingView.windowID)
                     NSApp.activate(ignoringOtherApps: true)
                 }

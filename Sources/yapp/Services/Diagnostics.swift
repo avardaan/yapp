@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 /// One fixed, content-free local event stream. Nothing is uploaded.
 @MainActor
-final class Diagnostics {
+final class Diagnostics: ObservableObject {
     static let shared = Diagnostics()
     enum Severity: String, Codable { case normal, error, fault }
     struct Event: Codable {
@@ -21,7 +21,7 @@ final class Diagnostics {
     private let started = ProcessInfo.processInfo.systemUptime
     private let appSession = UUID().uuidString
     private var loggers: [String: Logger] = [:]
-    private(set) var events: [Event] = []
+    @Published private(set) var events: [Event] = []
     private(set) var droppedEvents = 0
 
     init(defaults: UserDefaults = .standard, capacity: Int = 1000) {
@@ -53,7 +53,21 @@ final class Diagnostics {
         ((ProcessInfo.processInfo.systemUptime - start) * 1000).rounded()
     }
 
+    /// App-level context (launch, model, permissions) plus every event of the latest
+    /// `dictations` dictations, as the same JSON Lines format as the file export.
+    func recentData(dictations: Int) throws -> Data {
+        let recent = Set(events.compactMap(\.dictation).reversed().reduce(into: [Int]()) {
+            if $0.count < dictations, !$0.contains($1) { $0.append($1) }
+        })
+        return try exportData(events.filter { $0.dictation.map(recent.contains) ?? true },
+                              scope: "Current app session; app events plus the latest \(dictations) dictations. No speech or transcripts.")
+    }
+
     func exportData() throws -> Data {
+        try exportData(events, scope: "Current app session; bounded to latest \(capacity) events. No speech or transcripts.")
+    }
+
+    private func exportData(_ events: [Event], scope: String) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys]
@@ -63,7 +77,7 @@ final class Diagnostics {
             "version": info["CFBundleShortVersionString"] as? String ?? "unknown",
             "build": info["CFBundleVersion"] as? String ?? "unknown",
             "dropped_events": String(droppedEvents),
-            "scope": "Current app session; bounded to latest \(capacity) events. No speech or transcripts."
+            "scope": scope
         ])
         data.append(0x0a)
         for event in events {
