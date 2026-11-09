@@ -39,7 +39,7 @@ struct YappMenu: View {
             Button("Show Sonoscope") { }
                 .disabled(true)
             Menu("Diagnostics") {
-                Button("Copy Last \(Diagnostics.copiedDictations) Dictations") { Diagnostics.shared.copyRecent() }
+                Button("Copy Last \(Diagnostics.copiedDictations) Dictation Logs") { Diagnostics.shared.copyRecent() }
                 Button("Share Diagnostics…") {
                     openWindow(id: DiagnosticsSharingView.windowID)
                     NSApp.activate(ignoringOtherApps: true)
