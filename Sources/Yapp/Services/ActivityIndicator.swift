@@ -3,9 +3,10 @@ import SwiftUI
 import Combine
 
 @MainActor
-final class ActivityIndicator {
+final class ActivityIndicator: ObservableObject {
     static let shared = ActivityIndicator()
     private var panel: NSPanel?
+    @Published private(set) var visibleFrame: NSRect?
     private var observation: AnyCancellable?
     private var sound: NSSound?
 
@@ -33,6 +34,7 @@ final class ActivityIndicator {
     private func update(presentation: Presentation, session: DictationSession) {
         guard presentation != .hidden else {
             panel?.orderOut(nil)
+            visibleFrame = nil
             return
         }
         if panel == nil {
@@ -50,13 +52,14 @@ final class ActivityIndicator {
             panel.contentView = NSHostingView(rootView: ActivityIndicatorView(session: session).padding(4))
             self.panel = panel
         }
-        if panel?.isVisible != true, let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
+        if panel?.isVisible != true, let screen = FirstLaunchGuide.shared.tutorialScreen ?? NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
             let visible = screen.visibleFrame
             panel?.setFrameOrigin(NSPoint(x: visible.midX - 52, y: visible.minY + 14))
         }
         panel?.level = FirstLaunchGuide.shared.practiceID != nil
             ? NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 2) : .floating
         panel?.orderFrontRegardless()
+        visibleFrame = panel?.frame
         sound?.stop()
         guard presentation == .recording || presentation == .transcribing else { return }
         sound = NSSound(named: NSSound.Name(presentation == .recording ? "Tink" : "Pop"))
@@ -68,5 +71,6 @@ final class ActivityIndicator {
         observation?.cancel(); observation = nil
         sound?.stop(); sound = nil
         panel?.orderOut(nil); panel = nil
+        visibleFrame = nil
     }
 }

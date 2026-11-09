@@ -1,4 +1,5 @@
 import XCTest
+import AppKit
 @testable import Yapp
 
 final class TutorialPracticeTests: XCTestCase {
@@ -41,6 +42,26 @@ final class TutorialPracticeTests: XCTestCase {
         guide.replay()
         XCTAssertTrue(guide.isPending)
         guide.shutdown()
+    }
+
+    func testStagesFollowRealCaptureAndTranscriptionBeforeShowingResult() {
+        XCTAssertEqual(TutorialStage.resolve(phase: .ready, hasText: false), .prompt)
+        XCTAssertEqual(TutorialStage.resolve(phase: .recording, hasText: true), .listening)
+        XCTAssertEqual(TutorialStage.resolve(phase: .transcribing, hasText: true), .processing)
+        XCTAssertEqual(TutorialStage.resolve(phase: .ready, hasText: true), .result)
+        XCTAssertEqual(TutorialStage.resolve(phase: .loading, hasText: false), .preparing)
+    }
+
+    @MainActor
+    func testPracticeAreaIsCenteredAndLeavesRoomForRealFloaty() {
+        for size in [NSSize(width: 1440, height: 900), NSSize(width: 640, height: 480)] {
+            let bounds = NSRect(origin: .zero, size: size)
+            let frame = GuideCanvas.practiceFrame(in: bounds)
+            XCTAssertTrue(bounds.contains(frame))
+            XCTAssertEqual(frame.midX, bounds.midX)
+            XCTAssertGreaterThan(frame.minY, 180)
+            XCTAssertLessThan(frame.maxY + 90, bounds.maxY)
+        }
     }
 
 }

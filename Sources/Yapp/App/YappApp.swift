@@ -12,7 +12,6 @@ struct YappApp: App {
         } label: {
             Label { Text("Yapp — \(session.menuStatus)") } icon: { Image(nsImage: YappMark.menuImage(shortcutHeld: session.shortcutOwnsRecording)) }
                 .accessibilityLabel("Yapp — \(session.menuStatus)")
-                .background(StatusItemAnchor().frame(width: 18, height: 18))
         }
         .menuBarExtraStyle(.menu)
     }

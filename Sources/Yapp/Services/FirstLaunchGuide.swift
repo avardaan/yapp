@@ -3,26 +3,10 @@ import AVFoundation
 import SwiftUI
 import Combine
 
-/// Reports the real status-item position, including when macOS reorders the menu bar.
-struct StatusItemAnchor: NSViewRepresentable {
-    func makeNSView(context: Context) -> AnchorView { AnchorView() }
-    func updateNSView(_ view: AnchorView, context: Context) { view.report() }
-
-    final class AnchorView: NSView {
-        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); report() }
-        override func layout() { super.layout(); report() }
-        func report() {
-            guard let window, bounds.width > 0, bounds.height > 0 else { return }
-            let rect = window.convertToScreen(convert(bounds, to: nil))
-            DispatchQueue.main.async { FirstLaunchGuide.shared.anchor = rect }
-        }
-    }
-}
-
 @MainActor
 final class FirstLaunchGuide {
     static let shared = FirstLaunchGuide()
-    var anchor: NSRect?
+    private(set) var tutorialScreen: NSScreen?
     let practice = TutorialPractice()
     var practiceID: UUID? { practice.id }
     private var panels: [NSPanel] = []
@@ -69,15 +53,8 @@ final class FirstLaunchGuide {
         else if !manuallyRequested && !TextInsertion.allowed { reason = "accessibility_permission" }
         else { reason = nil }
         if let reason { waiting(reason); return }
-        // MenuBarExtra can render its label without hosting the background NSView.
-        // Its own status window still gives the real menu-item bounds.
-        let position = anchor ?? NSApp.windows.first(where: {
-            $0.className.contains("StatusBar") && $0.frame.width > 0 && $0.frame.height <= 50
-        })?.frame
-        guard let anchor = position,
-              let targetScreen = NSScreen.screens.first(where: { $0.frame.intersects(anchor) }) else {
-            waiting("menu_anchor"); return
-        }
+        guard let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main else { return }
+        tutorialScreen = targetScreen
         waitingReason = nil
         Diagnostics.shared.record("onboarding.shown", category: "Onboarding")
         timer?.invalidate(); timer = nil
@@ -91,8 +68,8 @@ final class FirstLaunchGuide {
             panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             panel.isReleasedWhenClosed = false
-            let localAnchor = screen == targetScreen ? anchor.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY) : nil
-            let canvas = GuideCanvas(frame: NSRect(origin: .zero, size: screen.frame.size), anchor: localAnchor,
+            let canvas = GuideCanvas(frame: NSRect(origin: .zero, size: screen.frame.size),
+                                     screenOrigin: screen.frame.origin, isPrimary: screen == targetScreen,
                                      shortcut: FnShortcut.shared.selected.title, practice: practice)
             panel.contentView = canvas
             panel.orderFrontRegardless()
@@ -133,6 +110,7 @@ final class FirstLaunchGuide {
         timer?.invalidate(); timer = nil
         if let id = practiceID { DictationSession.shared.cancelTutorial(id: id) }
         practice.end()
+        tutorialScreen = nil
         panels.forEach { $0.close() }; panels.removeAll()
         if let globalEscape { NSEvent.removeMonitor(globalEscape) }
         if let localEscape { NSEvent.removeMonitor(localEscape) }
@@ -155,24 +133,41 @@ final class TutorialPractice: ObservableObject {
     }
 }
 
+enum TutorialStage: Equatable {
+    case prompt, preparing, listening, processing, result
+    static func resolve(phase: DictationSession.Phase, hasText: Bool) -> Self {
+        switch phase {
+        case .recording: return .listening
+        case .transcribing: return .processing
+        case .loading, .requestingPermission: return .preparing
+        case .ready, .failed: return hasText ? .result : .prompt
+        }
+    }
+}
+
+/// Dim the desktop, with practice content on the same screen as the real activity pill.
 final class GuideCanvas: NSView {
-    private let anchor: NSRect?
-    private let shortcut: String
+    private let screenOrigin: NSPoint
+    private let isPrimary: Bool
     private let practice: TutorialPractice
     private var observations = Set<AnyCancellable>()
     private var phase = DictationSession.Phase.ready
+    private var displayedText = ""
+    private var floatyFrame: NSRect?
     private let output = NSTextView()
     private let outputScroll = NSScrollView()
     private let closeHint = NSTextField(labelWithString: "Esc to close")
-    private let keyVisual: NSHostingView<TutorialKeyVisual>
+    private let instruction: NSHostingView<TutorialInstruction>
     private let gold = NSColor(srgbRed: 244/255, green: 178/255, blue: 65/255, alpha: 1)
 
-    init(frame: NSRect, anchor: NSRect?, shortcut: String, practice: TutorialPractice) {
-        self.anchor = anchor; self.shortcut = shortcut; self.practice = practice
-        keyVisual = NSHostingView(rootView: TutorialKeyVisual(session: .shared, shortcut: shortcut))
+    init(frame: NSRect, screenOrigin: NSPoint, isPrimary: Bool, shortcut: String, practice: TutorialPractice,
+         session: DictationSession? = nil, activityFrames: AnyPublisher<NSRect?, Never>? = nil) {
+        let session = session ?? DictationSession.shared
+        self.screenOrigin = screenOrigin; self.isPrimary = isPrimary; self.practice = practice
+        instruction = NSHostingView(rootView: TutorialInstruction(session: session, practice: practice, shortcut: shortcut))
         super.init(frame: frame)
-        guard anchor != nil else { return }
-        output.font = .systemFont(ofSize: 19)
+        guard isPrimary else { return }
+        output.font = .systemFont(ofSize: 22)
         output.textColor = .white
         output.isEditable = false
         output.isSelectable = false
@@ -191,94 +186,126 @@ final class GuideCanvas: NSView {
         closeHint.textColor = .white.withAlphaComponent(0.55)
         closeHint.alignment = .center
         closeHint.isHidden = true
-        addSubview(outputScroll); addSubview(keyVisual); addSubview(closeHint)
-        keyVisual.alphaValue = 0
-        // First locate Yapp in the menu bar, then bring the single action into focus.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            guard let self else { return }
-            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { self.keyVisual.alphaValue = 1 }
-            else {
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.3
-                    self.keyVisual.animator().alphaValue = 1
-                }
-            }
-        }
+        addSubview(outputScroll); addSubview(instruction); addSubview(closeHint)
         practice.$text.sink { [weak self] text in
+            self?.displayedText = text
             self?.output.string = text
-            self?.closeHint.isHidden = text.isEmpty
             self?.output.scrollToEndOfDocument(nil)
-            self?.needsDisplay = true
+            self?.refresh()
+
         }.store(in: &observations)
-        DictationSession.shared.$phase.sink { [weak self] phase in
+        session.$phase.sink { [weak self] phase in
             self?.phase = phase
-            self?.needsDisplay = true
+            self?.refresh()
+        }.store(in: &observations)
+        (activityFrames ?? ActivityIndicator.shared.$visibleFrame.eraseToAnyPublisher()).sink { [weak self] frame in
+            guard let self else { return }
+            self.floatyFrame = frame?.offsetBy(dx: -self.screenOrigin.x, dy: -self.screenOrigin.y)
+            self.needsDisplay = true
         }.store(in: &observations)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
-    private var card: NSRect {
-        guard let anchor else { return .zero }
-        let width = min(430.0, bounds.width - 48)
-        let height = min(340.0, bounds.height - 100)
-        let x = min(max(24, anchor.midX - width + 35), bounds.width - width - 24)
-        let top = max(height + 24, min(anchor.minY - 100, bounds.height - 115))
-        return NSRect(x: x, y: top - height, width: width, height: height)
+    private func refresh() {
+        closeHint.isHidden = stage != .result
+        needsDisplay = true
     }
-    private var practiceBox: NSRect {
-        NSRect(x: card.minX + 22, y: card.minY + 24, width: card.width - 44, height: 104)
+
+    static func practiceFrame(in bounds: NSRect) -> NSRect {
+        let width = min(580.0, max(1, bounds.width - 64))
+        let height = min(140.0, bounds.height * 0.25)
+        return NSRect(x: bounds.midX - width / 2, y: bounds.midY - 35, width: width, height: height)
     }
+    private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
+    private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty) }
+
     override func layout() {
         super.layout()
-        guard anchor != nil else { return }
-        outputScroll.frame = practiceBox.insetBy(dx: 15, dy: 14)
+        guard isPrimary else { return }
+        outputScroll.frame = practiceBox.insetBy(dx: 20, dy: 18)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
-        keyVisual.frame = NSRect(x: card.midX - 56, y: card.maxY - 196, width: 112, height: 124)
-        closeHint.frame = NSRect(x: card.minX + 22, y: card.minY + 5, width: card.width - 44, height: 16)
+        instruction.frame = NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: 64)
+        closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 112, width: practiceBox.width, height: 18)
     }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(0.64).setFill()
         bounds.fill()
-        guard let anchor else { return }
-        let spotlight = NSBezierPath(roundedRect: anchor.insetBy(dx: -9, dy: -5), xRadius: 9, yRadius: 9)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current?.compositingOperation = .clear
-        spotlight.fill()
-        NSGraphicsContext.restoreGraphicsState()
-        gold.withAlphaComponent(0.8).setStroke()
-        spotlight.lineWidth = 1.5; spotlight.stroke()
-
-        let tip = NSPoint(x: anchor.midX, y: anchor.minY - 15)
-        let arrow = NSBezierPath()
-        arrow.move(to: NSPoint(x: card.midX, y: card.maxY + 16))
-        arrow.curve(to: tip, controlPoint1: NSPoint(x: card.maxX - 10, y: card.maxY + 6),
-                    controlPoint2: NSPoint(x: tip.x - 12, y: tip.y - 60))
-        arrow.move(to: NSPoint(x: tip.x - 10, y: tip.y - 13))
-        arrow.line(to: tip)
-        arrow.line(to: NSPoint(x: tip.x + 9, y: tip.y - 15))
-        gold.setStroke(); arrow.lineWidth = 2; arrow.lineCapStyle = .round; arrow.lineJoinStyle = .round; arrow.stroke()
-
-        let surface = NSBezierPath(roundedRect: card, xRadius: 20, yRadius: 20)
-        NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 0.98).setFill(); surface.fill()
-        NSColor.white.withAlphaComponent(0.12).setStroke(); surface.lineWidth = 1; surface.stroke()
-        drawText("Yapp lives up here.", rect: NSRect(x: card.minX + 22, y: card.maxY - 56, width: card.width - 44, height: 34),
-                 font: .systemFont(ofSize: 25, weight: .semibold), color: .white)
-        let box = NSBezierPath(roundedRect: practiceBox, xRadius: 10, yRadius: 10)
-        NSColor.black.withAlphaComponent(0.22).setFill(); box.fill()
-        gold.withAlphaComponent(phase == .recording ? 0.8 : 0.35).setStroke()
+        guard isPrimary else { return }
+        let box = NSBezierPath(roundedRect: practiceBox, xRadius: 14, yRadius: 14)
+        NSColor(srgbRed: 0.08, green: 0.08, blue: 0.09, alpha: 0.95).setFill(); box.fill()
+        (stage == .listening ? gold.withAlphaComponent(0.55) : NSColor.white.withAlphaComponent(0.18)).setStroke()
         box.lineWidth = 1; box.stroke()
-        if practice.text.isEmpty {
+        if displayedText.isEmpty {
             gold.setFill()
-            NSRect(x: practiceBox.minX + 14, y: practiceBox.maxY - 37, width: 1.5, height: 21).fill()
+            NSRect(x: practiceBox.minX + 20, y: practiceBox.maxY - 44, width: 1.5, height: 25).fill()
+        }
+
+        if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
+            let label = NSRect(x: min(max(24, frame.midX - 190), bounds.maxX - 404),
+                               y: min(frame.maxY + 60, practiceBox.minY - 54), width: 380, height: 44)
+            drawText("Yappman’s listening.", rect: label, size: 18, weight: .medium)
+            drawText("Speak, then release to transcribe.", rect: label.offsetBy(dx: 0, dy: -24), size: 14,
+                     color: .white.withAlphaComponent(0.65))
+            let start = NSPoint(x: label.midX + 35, y: label.minY - 12)
+            let tip = NSPoint(x: frame.midX, y: frame.maxY + 7)
+            drawArrow(from: start, to: tip,
+                      control1: NSPoint(x: start.x, y: tip.y + 24), control2: NSPoint(x: tip.x, y: tip.y + 25))
+        } else if stage == .result {
+            let label = NSRect(x: practiceBox.midX - 180, y: practiceBox.minY - 70, width: 360, height: 28)
+            drawText("That’s your voice, in text.", rect: label, size: 18, weight: .medium)
+            let tip = NSPoint(x: practiceBox.minX + 12, y: practiceBox.maxY - 33)
+            let outside = max(16, practiceBox.minX - 46)
+            drawArrow(from: NSPoint(x: label.minX + 16, y: label.midY + 7), to: tip,
+                      control1: NSPoint(x: outside, y: label.maxY + 10), control2: NSPoint(x: outside, y: tip.y))
         }
     }
-    private func drawText(_ text: String, rect: NSRect, font: NSFont, color: NSColor) {
-        (text as NSString).draw(in: rect, withAttributes: [.font: font, .foregroundColor: color])
+
+    private func drawArrow(from start: NSPoint, to tip: NSPoint, control1: NSPoint, control2: NSPoint) {
+        let arrow = NSBezierPath()
+        arrow.move(to: start); arrow.curve(to: tip, controlPoint1: control1, controlPoint2: control2)
+        let angle = atan2(tip.y - control2.y, tip.x - control2.x)
+        for offset in [-0.5, 0.5] {
+            arrow.move(to: tip)
+            arrow.line(to: NSPoint(x: tip.x - cos(angle + offset) * 10, y: tip.y - sin(angle + offset) * 10))
+        }
+        gold.withAlphaComponent(0.8).setStroke()
+        arrow.lineWidth = 1.5; arrow.lineCapStyle = .round; arrow.lineJoinStyle = .round; arrow.stroke()
+    }
+
+    private func drawText(_ text: String, rect: NSRect, size: CGFloat,
+                          weight: NSFont.Weight = .regular, color: NSColor = .white) {
+        let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .center
+        (text as NSString).draw(in: rect, withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight),
+                                                         .foregroundColor: color, .paragraphStyle: paragraph])
     }
 }
 
-/// A visual key, not a clickable button: the physical shortcut is the tutorial's action.
+private struct TutorialInstruction: View {
+    @ObservedObject var session: DictationSession
+    @ObservedObject var practice: TutorialPractice
+    let shortcut: String
+    private var stage: TutorialStage { .resolve(phase: session.phase, hasText: !practice.text.isEmpty) }
+
+    var body: some View {
+        Group {
+            if stage == .processing {
+                Text("Transcribing on your Mac…").font(.system(size: 22, weight: .medium))
+            } else {
+                HStack(spacing: 12) {
+                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "Press and hold")
+                    TutorialKeyVisual(session: session, shortcut: shortcut)
+                    if stage == .result { Text("to try again") }
+                }
+                .font(.system(size: stage == .result ? 19 : 22, weight: .medium))
+            }
+        }
+        .foregroundStyle(.white)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Mirrors the MacBook Globe/fn legends; the physical key remains the only action.
 private struct TutorialKeyVisual: View {
     @ObservedObject var session: DictationSession
     let shortcut: String
@@ -287,32 +314,28 @@ private struct TutorialKeyVisual: View {
 
     var body: some View {
         let pressed = session.shortcutOwnsRecording
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || pressed)) { timeline in
-            let bob = reduceMotion || pressed ? 0 : sin(timeline.date.timeIntervalSinceReferenceDate * 3) * 3
-            VStack(spacing: 12) {
-                Image(systemName: "arrow.down")
-                    .font(.system(size: 19, weight: .light))
-                    .foregroundStyle(gold.opacity(pressed ? 0 : 0.75))
-                    .offset(y: bob)
-                    .accessibilityHidden(true)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 17)
-                        .fill(.black.opacity(0.65))
-                        .offset(y: 7)
-                    RoundedRectangle(cornerRadius: 17)
-                        .fill(pressed ? gold.opacity(0.14) : Color.white.opacity(0.08))
-                        .overlay(RoundedRectangle(cornerRadius: 17)
-                            .strokeBorder(pressed ? gold : Color.white.opacity(0.3), lineWidth: 1))
-                        .overlay(Text(shortcut).font(.system(size: 27, weight: .medium))
-                            .foregroundStyle(pressed ? gold : .white))
-                        .offset(y: pressed ? 6 : 0)
-                        .shadow(color: pressed ? gold.opacity(0.12) : .clear, radius: 12)
+        ZStack {
+            RoundedRectangle(cornerRadius: 9).fill(.black.opacity(0.7)).offset(y: 4)
+            RoundedRectangle(cornerRadius: 9)
+                .fill(pressed ? gold.opacity(0.15) : Color.white.opacity(0.1))
+                .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(pressed ? gold : Color.white.opacity(0.35), lineWidth: 1))
+                .overlay {
+                    if shortcut == "Fn" {
+                        ZStack {
+                            Image(systemName: "globe").font(.system(size: 13, weight: .regular))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading).padding(7)
+                            Text("fn").font(.system(size: 12, weight: .medium))
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(7)
+                        }
+                        .foregroundStyle(pressed ? gold : .white)
+                    } else {
+                        Text(shortcut).font(.system(size: 14, weight: .medium)).foregroundStyle(pressed ? gold : .white)
+                    }
                 }
-                .frame(width: 78, height: 72)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
+                .offset(y: pressed ? 3 : 0)
         }
+        .frame(width: 50, height: 45)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Hold \(shortcut) to try dictation")
         .accessibilityValue(pressed ? "Pressed" : "Not pressed")
