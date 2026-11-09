@@ -4,18 +4,18 @@
 <dict>
 	<key>CFBundleExecutable</key>
 	<string>yapp</string>
+	<key>CFBundleIconFile</key>
+	<string>yapp.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.zeroslop.yapp</string>
 	<key>CFBundleName</key>
 	<string>yapp</string>
-	<key>CFBundleIconFile</key>
-	<string>yapp.icns</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.5</string>
+	<string>0.1.6</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>7</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
@@ -28,18 +28,18 @@
 	<string>yapp transcribes your voice entirely on this Mac.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUAllowsAutomaticUpdates</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
 	<key>SUFeedURL</key>
 	<string>https://yapp.now/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>guw9innzsUn3v7GAJUrrhn7h3bpXnfS0gPnGk9KypBA=</string>
-	<key>SUEnableAutomaticChecks</key>
-	<false/>
-	<key>SUAutomaticallyUpdate</key>
-	<false/>
-	<key>SUAllowsAutomaticUpdates</key>
-	<false/>
-	<key>SUEnableSystemProfiling</key>
-	<false/>
 	<key>SUVerifyUpdateBeforeExtraction</key>
 	<true/>
 </dict>
