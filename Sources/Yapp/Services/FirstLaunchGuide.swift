@@ -115,7 +115,7 @@ final class FirstLaunchGuide {
     private func waiting(_ reason: String) {
         guard waitingReason != reason else { return }
         waitingReason = reason
-        Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", detail: true, fields: ["reason": reason])
+        Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", fields: ["reason": reason])
     }
 
     @discardableResult

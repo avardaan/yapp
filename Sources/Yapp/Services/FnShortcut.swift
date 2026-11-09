@@ -114,7 +114,7 @@ final class FnShortcut: ObservableObject {
             status = "Shortcut listener unavailable"
             return
         }
-        Diagnostics.shared.record("listener.attached", category: "Shortcut", detail: true, fields: ["backend": "accessibility"])
+        Diagnostics.shared.record("listener.attached", category: "Shortcut", fields: ["backend": "accessibility"])
         status = "Hold \(selected.title) to talk"
     }
 
@@ -175,15 +175,15 @@ final class FnShortcut: ObservableObject {
     private func apply(_ action: ShortcutKeyState.Action?) {
         switch action {
         case .pressed:
-            Diagnostics.shared.record("shortcut.pressed", category: "Shortcut", detail: true)
+            Diagnostics.shared.record("shortcut.pressed", category: "Shortcut")
             pressedAt = Date()
             DictationSession.shared.shortcutPressed()
         case .released:
-            Diagnostics.shared.record("shortcut.released", category: "Shortcut", detail: true)
+            Diagnostics.shared.record("shortcut.released", category: "Shortcut")
             pressedAt = nil
             DictationSession.shared.shortcutReleased()
         case .cancelled:
-            Diagnostics.shared.record("shortcut.cancelled", category: "Shortcut", detail: true)
+            Diagnostics.shared.record("shortcut.cancelled", category: "Shortcut")
             pressedAt = nil
             DictationSession.shared.cancelShortcut()
         case nil: break

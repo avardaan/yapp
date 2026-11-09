@@ -5,7 +5,6 @@ struct YappMenu: View {
     @ObservedObject var session: DictationSession
     @ObservedObject private var shortcut = FnShortcut.shared
     @ObservedObject private var updater = AppUpdater.shared
-    @ObservedObject private var diagnostics = Diagnostics.shared
 
     var body: some View {
         Button("About") { AboutPanel.show() }
@@ -38,15 +37,6 @@ struct YappMenu: View {
         Menu("Advanced") {
             Button("Sonoscope…") { }
                 .disabled(true)
-            Menu("Logging") {
-                Picker("Logging", selection: $diagnostics.mode) {
-                    ForEach(Diagnostics.Mode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
-            }
             Button("Open Tutorial…") { FirstLaunchGuide.shared.replay() }
         }
         Button("Quit") { NSApp.terminate(nil) }

@@ -76,7 +76,7 @@ final class TextInsertion {
     }
 
     private static func log(_ outcome: String, dictation: Int?) {
-        Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, detail: true, fields: ["outcome": outcome])
+        Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, fields: ["outcome": outcome])
     }
 
     private static func restoreClipboard(_ saved: [[NSPasteboard.PasteboardType: Data]], ifUnchanged revision: Int) {

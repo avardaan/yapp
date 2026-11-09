@@ -14,7 +14,7 @@ final class DictationSession: ObservableObject {
     private var captureMS: Double = 0
     private var processingStarted: TimeInterval?
     @Published var phase: Phase = .loading {
-        didSet { if oldValue != phase { Diagnostics.shared.record("phase.changed", category: "Dictation", dictation: activeDictation, detail: true, fields: ["phase": String(describing: phase)]) } }
+        didSet { if oldValue != phase { Diagnostics.shared.record("phase.changed", category: "Dictation", dictation: activeDictation, fields: ["phase": String(describing: phase)]) } }
     }
     @Published var status = "Loading English model…"
     @Published var transcript = ""
@@ -33,7 +33,7 @@ final class DictationSession: ObservableObject {
 
     func shortcutPressed() {
         guard (phase == .ready || phase == .loading), !shortcutOwnsRecording else {
-            Diagnostics.shared.record("shortcut.ignored", category: "Shortcut", detail: true, fields: ["reason": shortcutOwnsRecording ? "already_held" : String(describing: phase)])
+            Diagnostics.shared.record("shortcut.ignored", category: "Shortcut", fields: ["reason": shortcutOwnsRecording ? "already_held" : String(describing: phase)])
             return
         }
         nextDictation += 1
@@ -95,7 +95,7 @@ final class DictationSession: ObservableObject {
             engine = try await WhisperKit(WhisperKitConfig(modelFolder: model.path, tokenizerFolder: model, verbose: false, download: false))
             Diagnostics.shared.record("model.ready", category: "Model", fields: ["duration_ms": String(Diagnostics.milliseconds(since: loadStarted))])
             if let timings = engine?.currentTimings {
-                Diagnostics.shared.record("model.stages", category: "Model", detail: true, fields: [
+                Diagnostics.shared.record("model.stages", category: "Model", fields: [
                     "encoder_ms": String((timings.encoderLoadTime * 1000).rounded()),
                     "decoder_ms": String((timings.decoderLoadTime * 1000).rounded()),
                     "tokenizer_ms": String((timings.tokenizerLoadTime * 1000).rounded())
@@ -278,7 +278,7 @@ final class DictationSession: ObservableObject {
     }
 
     private func trace(_ event: String, fields: [String: String] = [:]) {
-        Diagnostics.shared.record(event, category: "Dictation", dictation: activeDictation, detail: true, fields: fields)
+        Diagnostics.shared.record(event, category: "Dictation", dictation: activeDictation, fields: fields)
     }
 
     private func finish(_ outcome: String, severity: Diagnostics.Severity = .normal, error: Error? = nil) {
