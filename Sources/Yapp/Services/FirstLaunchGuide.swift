@@ -300,11 +300,11 @@ final class GuideCanvas: NSView {
             // Start just before the "Yappman's listening…" title.
             let title = ("Yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 22, weight: .medium)])
             let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.maxY - 23)
-            let side = max(min(practiceBox.minX - 56, start.x - 30), bounds.minX + 16)
+            let side = max(practiceBox.minX - 200, bounds.minX + 24)
             let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: side - 40, y: start.y),
-                      control2: NSPoint(x: side - 30, y: tip.y + 10))
+                      control1: NSPoint(x: side, y: start.y + 10),
+                      control2: NSPoint(x: side, y: tip.y - 10))
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
