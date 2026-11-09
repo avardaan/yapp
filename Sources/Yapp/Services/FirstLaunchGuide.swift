@@ -27,7 +27,6 @@ final class FirstLaunchGuide {
     var practiceID: UUID? { practice.id }
     private var panels: [NSPanel] = []
     private var timer: Timer?
-    private var completionTask: Task<Void, Never>?
     private var waitingReason: String?
     private var globalEscape: Any?
     private var localEscape: Any?
@@ -120,16 +119,7 @@ final class FirstLaunchGuide {
 
     @discardableResult
     func receivePracticeText(_ text: String, for id: UUID) -> Bool {
-        guard practice.receive(text, for: id) else { return false }
-        completionTask?.cancel()
-        completionTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(3)) } catch { return }
-            guard let self, self.practiceID == id,
-                  DictationSession.shared.phase == .ready,
-                  !DictationSession.shared.shortcutOwnsRecording else { return }
-            self.dismiss()
-        }
-        return true
+        practice.receive(text, for: id)
     }
 
     func dismiss() {
@@ -141,7 +131,6 @@ final class FirstLaunchGuide {
 
     func shutdown() {
         timer?.invalidate(); timer = nil
-        completionTask?.cancel(); completionTask = nil
         if let id = practiceID { DictationSession.shared.cancelTutorial(id: id) }
         practice.end()
         panels.forEach { $0.close() }; panels.removeAll()
@@ -174,6 +163,7 @@ final class GuideCanvas: NSView {
     private var phase = DictationSession.Phase.ready
     private let output = NSTextView()
     private let outputScroll = NSScrollView()
+    private let closeHint = NSTextField(labelWithString: "Esc to close")
     private let keyVisual: NSHostingView<TutorialKeyVisual>
     private let gold = NSColor(srgbRed: 244/255, green: 178/255, blue: 65/255, alpha: 1)
 
@@ -197,7 +187,11 @@ final class GuideCanvas: NSView {
         outputScroll.hasVerticalScroller = true
         outputScroll.scrollerStyle = .overlay
         outputScroll.documentView = output
-        addSubview(outputScroll); addSubview(keyVisual)
+        closeHint.font = .systemFont(ofSize: 12)
+        closeHint.textColor = .white.withAlphaComponent(0.55)
+        closeHint.alignment = .center
+        closeHint.isHidden = true
+        addSubview(outputScroll); addSubview(keyVisual); addSubview(closeHint)
         keyVisual.alphaValue = 0
         // First locate Yapp in the menu bar, then bring the single action into focus.
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
@@ -212,6 +206,7 @@ final class GuideCanvas: NSView {
         }
         practice.$text.sink { [weak self] text in
             self?.output.string = text
+            self?.closeHint.isHidden = text.isEmpty
             self?.output.scrollToEndOfDocument(nil)
             self?.needsDisplay = true
         }.store(in: &observations)
@@ -239,6 +234,7 @@ final class GuideCanvas: NSView {
         outputScroll.frame = practiceBox.insetBy(dx: 15, dy: 14)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
         keyVisual.frame = NSRect(x: card.midX - 56, y: card.maxY - 196, width: 112, height: 124)
+        closeHint.frame = NSRect(x: card.minX + 22, y: card.minY + 5, width: card.width - 44, height: 16)
     }
 
     override func draw(_ dirtyRect: NSRect) {
