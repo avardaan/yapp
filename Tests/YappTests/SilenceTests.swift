@@ -4,7 +4,7 @@ import AppKit
 
 final class SilenceTests: XCTestCase {
     func testNonSpeechAnnotationsProduceNoText() {
-        for text in ["[Silence]", " (silence) ", "[BLANK_AUDIO]", "[Silence] [Silence]", "[music]", "(footsteps)", "{Paused]", "[Paused]", "(mouse clicking)", "[keyboard typing]", "(clicking)"] {
+        for text in ["[Silence]", " (silence) ", "[BLANK_AUDIO]", "[Silence] [Silence]", "[music]", "(footsteps)", "{Paused]", "[Paused]", "(mouse clicking)", "[keyboard typing]", "(clicking)", "(audience chattering)", " [ Music ] ", "(music)", "*laughs*", "♪", "♪ ♪", "(laughs).", "[BLANK_AUDIO] (wind blowing) ♪"] {
             XCTAssertEqual(DictationText.clean(text), "")
         }
     }
@@ -13,7 +13,11 @@ final class SilenceTests: XCTestCase {
         XCTAssertEqual(DictationText.clean("I paused before clicking the mouse."), "I paused before clicking the mouse.")
         XCTAssertEqual(DictationText.clean("Hello. (mouse clicking) Next sentence."), "Hello. Next sentence.")
         XCTAssertEqual(DictationText.clean("[Silence] Hello there."), "Hello there.")
-        XCTAssertEqual(DictationText.clean("Review [architecture] tomorrow."), "Review [architecture] tomorrow.")
+        XCTAssertEqual(DictationText.clean("Review [architecture] tomorrow."), "Review tomorrow.")
+        XCTAssertEqual(DictationText.clean("(audience chattering) Hello there."), "Hello there.")
+        XCTAssertEqual(DictationText.clean("I agree (laughs)."), "I agree.")
+        XCTAssertEqual(DictationText.clean("♪ Sing along ♪"), "Sing along")
+        XCTAssertEqual(DictationText.clean("Well *sighs* okay, 2 + 2 = 4."), "Well okay, 2 + 2 = 4.")
     }
     func testSilentAudioAndBriefClickHaveNoActivity() {
         var samples = Array(repeating: Float(0), count: 16000)

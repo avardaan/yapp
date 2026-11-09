@@ -1,12 +1,16 @@
 import Foundation
 
-/// Remove known non-speech annotations without removing ordinary spoken words.
+/// Remove decoder non-speech annotations. Whisper emits brackets, parentheses,
+/// asterisks, and music notes only for annotations, never for dictated words.
 enum DictationText {
     static func clean(_ text: String) -> String {
-        let annotations = #"(?i)[\[({]\s*(?:silence|paused?|blank[ _]audio|no[ _]speech|inaudible|unintelligible|music|applause|laughter|footsteps|background noise|(?:mouse|keyboard)[ _]+(?:click(?:s|ing)?|typ(?:ing|es))|click(?:s|ing)?)\s*[\])}]"#
-        return text.replacingOccurrences(of: annotations, with: "", options: .regularExpression)
+        let annotations = #"\[[^\]]*\]|\([^)]*\)|\{[^}]*[\]})]|\*[^*\n]+\*|[♪♫♬♩]+"#
+        let cleaned = text.replacingOccurrences(of: annotations, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"[ \t]+([.,!?;:])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"[ \t]{2,}"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        // Leftover punctuation alone (e.g. "(laughs)." -> ".") is not speech.
+        return cleaned.contains { $0.isLetter || $0.isNumber } ? cleaned : ""
     }
 }
 
