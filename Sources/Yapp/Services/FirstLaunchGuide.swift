@@ -251,6 +251,11 @@ final class GuideCanvas: NSView {
         return NSRect(x: bounds.midX - width / 2, y: bounds.midY - 35, width: width, height: height)
     }
     private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
+    private var instructionFrame: NSRect {
+        if stage == .preparing { return NSRect(x: practiceBox.minX, y: bounds.midY - 32, width: practiceBox.width, height: 64) }
+        let height: CGFloat = stage == .listening ? 92 : 64
+        return NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: height)
+    }
     private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty, hasPrepared: practice.isPrepared) }
 
     override func layout() {
@@ -258,9 +263,7 @@ final class GuideCanvas: NSView {
         guard isPrimary else { return }
         outputScroll.frame = practiceBox.insetBy(dx: 20, dy: 18)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
-        instruction.frame = NSRect(x: practiceBox.minX,
-                                   y: stage == .preparing ? bounds.midY - 32 : practiceBox.maxY + 26,
-                                   width: practiceBox.width, height: 64)
+        instruction.frame = instructionFrame
         closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 132, width: practiceBox.width, height: 18)
     }
 
@@ -293,15 +296,13 @@ final class GuideCanvas: NSView {
         }
 
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
-            let label = NSRect(x: min(max(24, frame.midX - 190), bounds.maxX - 404),
-                               y: min(frame.maxY + 60, practiceBox.minY - 54), width: 380, height: 44)
-            drawText("Yappman’s listening…", rect: label, size: 18, weight: .medium)
-            drawText("Speak, then release when you’re done.", rect: label.offsetBy(dx: 0, dy: -24), size: 14,
-                     color: .white.withAlphaComponent(0.65))
-            let start = NSPoint(x: label.midX + 35, y: label.minY - 12)
-            let tip = NSPoint(x: frame.midX, y: frame.maxY + 7)
+            // The instructions stay above the box; loop around its right side down to the floaty.
+            let side = min(practiceBox.maxX + 56, bounds.maxX - 16)
+            let start = NSPoint(x: practiceBox.maxX + 8, y: instructionFrame.maxY - 16)
+            let tip = NSPoint(x: frame.maxX + 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: start.x, y: tip.y + 24), control2: NSPoint(x: tip.x, y: tip.y + 25))
+                      control1: NSPoint(x: side + 40, y: start.y),
+                      control2: NSPoint(x: side + 30, y: tip.y + 10))
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
@@ -362,9 +363,23 @@ private struct TutorialInstruction: View {
                 }
             } else if stage == .processing {
                 Text("Transcribing…").font(.system(size: 22, weight: .medium))
+            } else if stage == .listening {
+                VStack(spacing: 12) {
+                    Text("Yappman’s listening…").font(.system(size: 22, weight: .medium))
+                    HStack(spacing: 8) {
+                        Text("While holding")
+                        TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
+                        Text("start speaking and release")
+                        TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
+                        Text("when you’re done.")
+                    }
+                    .font(.system(size: 16))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .fixedSize()
+                }
             } else {
                 HStack(spacing: 12) {
-                    Text(stage == .listening ? "Keep holding" : stage == .result ? "Hold" : "To use, press and hold")
+                    Text(stage == .result ? "Hold" : "To use, press and hold")
                     TutorialKeyVisual(session: session, shortcut: shortcut)
                     if stage == .result { Text("to try again") }
                 }
@@ -398,10 +413,15 @@ private struct TutorialPreparationSpinner: View {
 private struct TutorialKeyVisual: View {
     @ObservedObject var session: DictationSession
     let shortcut: String
+    var compact = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let gold = Color(red: 244 / 255, green: 178 / 255, blue: 65 / 255)
 
     var body: some View {
+        key.scaleEffect(compact ? 0.72 : 1).frame(width: compact ? 36 : 50, height: compact ? 33 : 45)
+    }
+
+    @ViewBuilder private var key: some View {
         let pressed = session.shortcutOwnsRecording
         ZStack {
             RoundedRectangle(cornerRadius: 9).fill(.black.opacity(0.7)).offset(y: 4)
