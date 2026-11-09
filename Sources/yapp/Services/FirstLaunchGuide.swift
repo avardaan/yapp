@@ -424,7 +424,7 @@ private struct TutorialKeyVisual: View {
     }
 
     @ViewBuilder private var key: some View {
-        let pressed = session.shortcutOwnsRecording
+        let pressed = !compact && session.shortcutOwnsRecording
         ZStack {
             RoundedRectangle(cornerRadius: 9).fill(.black.opacity(0.7)).offset(y: 4)
             RoundedRectangle(cornerRadius: 9)
