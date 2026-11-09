@@ -25,7 +25,7 @@ BIN=$(swift build -c release --show-bin-path)
 # Rebuild only the disposable distribution directory, never the local development app.
 rm -rf "$ROOT"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Models" "$APP/Contents/Resources/Licenses"
-cp "$BIN/Yapp" "$APP/Contents/MacOS/yapp"
+cp "$BIN/yapp" "$APP/Contents/MacOS/yapp"
 cp Info.plist "$APP/Contents/Info.plist"
 cp Resources/yapp.icns "$APP/Contents/Resources/yapp.icns"
 ditto Models "$APP/Contents/Resources/Models"

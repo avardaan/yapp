@@ -62,7 +62,7 @@ final class FnShortcut: ObservableObject {
     }
 
     // Preserve the user's original single-press Globe action before disabling it.
-    // This persists across quitting Yapp, matching an installed shortcut choice.
+    // This persists across quitting yapp, matching an installed shortcut choice.
     private func configureGlobeKey() {
         guard !defaults.bool(forKey: "globeActionConfigured") else { return }
         if let old = systemDefaults.object(forKey: "AppleFnUsageType") {

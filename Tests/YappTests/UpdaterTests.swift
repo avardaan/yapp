@@ -1,6 +1,6 @@
 import XCTest
 import Sparkle
-@testable import Yapp
+@testable import yapp
 
 final class UpdaterTests: XCTestCase {
     @MainActor

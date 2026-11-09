@@ -89,7 +89,7 @@ final class DictationSession: ObservableObject {
             let model = Bundle.main.resourceURL!.appendingPathComponent("Models")
             for name in ["AudioEncoder.mlmodelc", "MelSpectrogram.mlmodelc", "TextDecoder.mlmodelc", "tokenizer.json", "tokenizer_config.json"] {
                 guard FileManager.default.fileExists(atPath: model.appendingPathComponent(name).path) else {
-                    throw NSError(domain: "Yapp", code: 1, userInfo: [NSLocalizedDescriptionKey: "Missing bundled model asset: \(name). Run the build script again."])
+                    throw NSError(domain: "yapp", code: 1, userInfo: [NSLocalizedDescriptionKey: "Missing bundled model asset: \(name). Run the build script again."])
                 }
             }
             engine = try await WhisperKit(WhisperKitConfig(modelFolder: model.path, tokenizerFolder: model, verbose: false, download: false))
@@ -159,7 +159,7 @@ final class DictationSession: ObservableObject {
                 AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false
             ])
             capture.isMeteringEnabled = true
-            guard capture.record() else { throw NSError(domain: "Yapp", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not start the microphone."]) }
+            guard capture.record() else { throw NSError(domain: "yapp", code: 2, userInfo: [NSLocalizedDescriptionKey: "Could not start the microphone."]) }
             recorder = capture
             captureStarted = ProcessInfo.processInfo.systemUptime
             trace("capture.started")

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Yapp
+@testable import yapp
 
 final class LoadingShortcutTests: XCTestCase {
     @MainActor

@@ -1,6 +1,6 @@
 import XCTest
 import AppKit
-@testable import Yapp
+@testable import yapp
 
 final class DictationLifecycleTests: XCTestCase {
     @MainActor

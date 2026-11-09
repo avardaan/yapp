@@ -13,7 +13,7 @@ fi
 swift build -c release
 APP="$PWD/build/yapp.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Models"
-cp .build/release/Yapp "$APP/Contents/MacOS/yapp"
+cp .build/release/yapp "$APP/Contents/MacOS/yapp"
 cp Info.plist "$APP/Contents/Info.plist"
 cp Resources/yapp.icns "$APP/Contents/Resources/yapp.icns"
 mkdir -p "$APP/Contents/Resources/Licenses"

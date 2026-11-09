@@ -297,8 +297,8 @@ final class GuideCanvas: NSView {
 
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
             // The instructions stay above the box; loop around its left side down to the floaty.
-            // Start just before the "Yappman's listening…" title.
-            let title = ("Yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 22, weight: .medium)])
+            // Start just before the "yappman's listening…" title.
+            let title = ("yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 22, weight: .medium)])
             let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.maxY - 23)
             let side = max(practiceBox.minX - 200, bounds.minX + 24)
             let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
@@ -367,7 +367,7 @@ private struct TutorialInstruction: View {
                 Text("Transcribing…").font(.system(size: 22, weight: .medium))
             } else if stage == .listening {
                 VStack(spacing: 12) {
-                    Text("Yappman’s listening…").font(.system(size: 22, weight: .medium))
+                    Text("yappman’s listening…").font(.system(size: 22, weight: .medium))
                     HStack(spacing: 8) {
                         Text("While holding")
                         TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)

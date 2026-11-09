@@ -1,7 +1,7 @@
 import XCTest
 import AppKit
 import ApplicationServices
-@testable import Yapp
+@testable import yapp
 
 final class TextInsertionTests: XCTestCase {
     @MainActor
