@@ -1,45 +1,34 @@
 import SwiftUI
 
-/// Live view of this launch's local diagnostics stream, grouped by dictation. Content-free by construction.
+/// Live table of this launch's local diagnostics stream. Content-free by construction.
 struct DiagnosticsLogView: View {
     static let windowID = "diagnostics-log"
     static let copiedDictations = 5
     @ObservedObject private var diagnostics = Diagnostics.shared
     @State private var copied = false
 
-    /// A run of app-level events, or every event of one dictation (kept together even if app events interleave).
-    struct Group: Identifiable {
+    struct Row: Identifiable {
         let id: Int
-        let dictation: UUID?
-        var events: [Diagnostics.Event]
-    }
-
-    static func groups(_ events: [Diagnostics.Event]) -> [Group] {
-        var groups: [Group] = []
-        var index: [UUID: Int] = [:]
-        for event in events {
-            if let dictation = event.dictation, let i = index[dictation] { groups[i].events.append(event); continue }
-            if event.dictation == nil, let last = groups.indices.last, groups[last].dictation == nil {
-                groups[last].events.append(event); continue
-            }
-            if let dictation = event.dictation { index[dictation] = groups.count }
-            groups.append(Group(id: groups.count, dictation: event.dictation, events: [event]))
-        }
-        return groups
+        let event: Diagnostics.Event
+        var timestamp: String { String(Int64((event.timestamp.timeIntervalSince1970 * 1000).rounded())) }
+        var dictation: String { event.dictation?.uuidString.lowercased() ?? "—" }
+        var fields: String { event.fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ") }
     }
 
     var body: some View {
+        let rows = diagnostics.events.enumerated().map { Row(id: $0.offset, event: $0.element) }
         VStack(spacing: 0) {
             ScrollViewReader { proxy in
-                List {
-                    ForEach(Self.groups(diagnostics.events)) { group in
-                        Section { ForEach(Array(group.events.enumerated()), id: \.offset) { _, event in row(event) } }
-                            header: { header(group) }
-                            .id(group.id)
-                    }
+                Table(rows) {
+                    TableColumn("timestamp (ms)") { cell($0.timestamp, $0) }.width(min: 110, ideal: 115)
+                    TableColumn("dictation_id") { cell($0.dictation, $0) }.width(min: 120, ideal: 260)
+                    TableColumn("category") { cell($0.event.category, $0) }.width(min: 70, ideal: 90)
+                    TableColumn("event") { cell($0.event.event, $0) }.width(min: 110, ideal: 160)
+                    TableColumn("fields") { cell($0.fields, $0) }
                 }
-                .onChange(of: diagnostics.events.count) { _, _ in scrollToEnd(proxy) }
-                .onAppear { scrollToEnd(proxy) }
+                .font(.system(size: 11, design: .monospaced))
+                .onChange(of: rows.count) { _, count in proxy.scrollTo(count - 1, anchor: .bottom) }
+                .onAppear { proxy.scrollTo(rows.count - 1, anchor: .bottom) }
             }
             Divider()
             HStack {
@@ -49,39 +38,11 @@ struct DiagnosticsLogView: View {
             }
             .padding(12)
         }
-        .frame(minWidth: 640, minHeight: 360)
+        .frame(minWidth: 900, minHeight: 360)
     }
 
-    private func scrollToEnd(_ proxy: ScrollViewProxy) {
-        if let last = Self.groups(diagnostics.events).last { proxy.scrollTo(last.id, anchor: .bottom) }
-    }
-
-    @ViewBuilder private func header(_ group: Group) -> some View {
-        if let dictation = group.dictation {
-            let completed = group.events.last { $0.event == "dictation.completed" }
-            let start = group.events[0].timestamp.formatted(date: .omitted, time: .standard)
-            let summary = completed.map { done in
-                [done.fields["outcome"], done.fields["duration_ms"].flatMap(Double.init).map { String(format: "%.1f s", $0 / 1000) }]
-                    .compactMap { $0 }.joined(separator: " · ")
-            } ?? "in progress"
-            HStack {
-                Text("Dictation · \(start) · \(summary)").fontWeight(.semibold)
-                Spacer()
-                Text(dictation.uuidString.lowercased()).font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.secondary).textSelection(.enabled)
-            }
-        } else {
-            Text("App").fontWeight(.semibold)
-        }
-    }
-
-    private func row(_ event: Diagnostics.Event) -> some View {
-        let fields = event.fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-        return Text("\(Int64((event.timestamp.timeIntervalSince1970 * 1000).rounded()))  \(event.category)  \(event.event)  \(fields)")
-            .font(.system(size: 11, design: .monospaced))
-            .foregroundStyle(event.severity == .normal ? .primary : Color.red)
-            .textSelection(.enabled)
-            .padding(.leading, 16)
+    private func cell(_ text: String, _ row: Row) -> some View {
+        Text(text).foregroundStyle(row.event.severity == .normal ? .primary : Color.red).textSelection(.enabled)
     }
 
     private func copy() {
