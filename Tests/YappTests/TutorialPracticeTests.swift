@@ -74,4 +74,18 @@ final class TutorialPracticeTests: XCTestCase {
         XCTAssertTrue(host.contains(icon))
     }
 
+    @MainActor
+    func testPreparationIsOnlyBeforePracticeBegins() {
+        let practice = TutorialPractice()
+        practice.begin()
+        XCTAssertFalse(practice.isPrepared)
+        XCTAssertEqual(TutorialStage.resolve(phase: .loading, hasText: false, hasPrepared: practice.isPrepared), .preparing)
+        practice.markPrepared()
+        XCTAssertTrue(practice.isPrepared)
+        XCTAssertEqual(TutorialStage.resolve(phase: .loading, hasText: false, hasPrepared: practice.isPrepared), .prompt)
+        XCTAssertEqual(TutorialStage.resolve(phase: .requestingPermission, hasText: false, hasPrepared: practice.isPrepared), .prompt)
+        practice.end()
+        XCTAssertFalse(practice.isPrepared)
+    }
+
 }

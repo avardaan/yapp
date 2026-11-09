@@ -26,7 +26,7 @@ choices or requirements change, not for routine implementation changes.
 
 - **Offline:** bundle all inference assets. Missing assets fail locally; never
   silently download models or fall back to cloud services.
-- **Permissions:** Microphone and Accessibility only for the normal flow. A one-time nonactivating tutorial appears after permissions and model readiness;
+- **Permissions:** Microphone and Accessibility only for the normal flow. A one-time nonactivating tutorial appears after permissions; an initial Preparing screen waits for model readiness before practice begins;
   it centers a transient practice box and explains the real activity pill. Shortcut holds dictate into that box until
   dismissed with Escape; show the close hint after the first successful result.
   Never paste practice text into another app. Request Microphone at first launch, then Accessibility; never

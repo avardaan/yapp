@@ -31,8 +31,14 @@ final class ActivityIndicator: ObservableObject {
             }
     }
 
+    func refreshForTutorial() {
+        let session = DictationSession.shared
+        update(presentation: .resolve(phase: session.phase, waiting: session.waitingForModel), session: session)
+    }
+
     private func update(presentation: Presentation, session: DictationSession) {
-        guard presentation != .hidden else {
+        let tutorialPreparing = FirstLaunchGuide.shared.practiceID != nil && !FirstLaunchGuide.shared.practice.isPrepared
+        guard presentation != .hidden, !(presentation == .preparing && tutorialPreparing) else {
             panel?.orderOut(nil)
             visibleFrame = nil
             return

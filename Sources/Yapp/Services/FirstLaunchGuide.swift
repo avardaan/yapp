@@ -67,7 +67,7 @@ final class FirstLaunchGuide {
         let reason: String?
         let phase = DictationSession.shared.phase
         if phase == .recording || phase == .transcribing || phase == .requestingPermission { reason = "dictation_busy" }
-        else if !manuallyRequested && phase != .ready { reason = "model_not_ready" }
+        else if !manuallyRequested && phase == .failed { reason = "model_failed" }
         else if !manuallyRequested && AVCaptureDevice.authorizationStatus(for: .audio) != .authorized { reason = "microphone_permission" }
         else if !manuallyRequested && !TextInsertion.allowed { reason = "accessibility_permission" }
         else { reason = nil }
@@ -81,7 +81,8 @@ final class FirstLaunchGuide {
         waitingReason = nil
         Diagnostics.shared.record("onboarding.shown", category: "Onboarding")
         timer?.invalidate(); timer = nil
-        practice.begin()
+        practice.begin(prepared: phase == .ready)
+        ActivityIndicator.shared.refreshForTutorial()
         for screen in NSScreen.screens {
             let panel = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.isOpaque = false
@@ -146,8 +147,13 @@ final class FirstLaunchGuide {
 final class TutorialPractice: ObservableObject {
     @Published private(set) var id: UUID?
     @Published private(set) var text = ""
-    func begin() { text = ""; id = UUID() }
-    func end() { id = nil; text = "" }
+    @Published private(set) var isPrepared = false
+    func begin(prepared: Bool = false) { text = ""; isPrepared = prepared; id = UUID() }
+    func markPrepared() {
+        guard id != nil, !isPrepared else { return }
+        isPrepared = true
+    }
+    func end() { id = nil; text = ""; isPrepared = false }
     @discardableResult
     func receive(_ text: String, for id: UUID) -> Bool {
         guard self.id == id else { return false }
@@ -158,12 +164,12 @@ final class TutorialPractice: ObservableObject {
 
 enum TutorialStage: Equatable {
     case prompt, preparing, listening, processing, result
-    static func resolve(phase: DictationSession.Phase, hasText: Bool) -> Self {
+    static func resolve(phase: DictationSession.Phase, hasText: Bool, hasPrepared: Bool = false) -> Self {
         switch phase {
         case .recording: return .listening
         case .transcribing: return .processing
-        case .loading, .requestingPermission: return .preparing
-        case .ready, .failed: return hasText ? .result : .prompt
+        case .loading: return hasPrepared ? (hasText ? .result : .prompt) : .preparing
+        case .ready, .failed, .requestingPermission: return hasText ? .result : .prompt
         }
     }
 }
@@ -221,6 +227,7 @@ final class GuideCanvas: NSView {
         }.store(in: &observations)
         session.$phase.sink { [weak self] phase in
             self?.phase = phase
+            if phase == .ready || phase == .recording || phase == .transcribing { self?.practice.markPrepared() }
             self?.refresh()
         }.store(in: &observations)
         (activityFrames ?? ActivityIndicator.shared.$visibleFrame.eraseToAnyPublisher()).sink { [weak self] frame in
@@ -233,6 +240,8 @@ final class GuideCanvas: NSView {
 
     private func refresh() {
         closeHint.isHidden = stage != .result
+        outputScroll.isHidden = stage == .preparing
+        needsLayout = true
         needsDisplay = true
     }
 
@@ -242,22 +251,24 @@ final class GuideCanvas: NSView {
         return NSRect(x: bounds.midX - width / 2, y: bounds.midY - 35, width: width, height: height)
     }
     private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
-    private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty) }
+    private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty, hasPrepared: practice.isPrepared) }
 
     override func layout() {
         super.layout()
         guard isPrimary else { return }
         outputScroll.frame = practiceBox.insetBy(dx: 20, dy: 18)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
-        instruction.frame = NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: 64)
+        instruction.frame = NSRect(x: practiceBox.minX,
+                                   y: stage == .preparing ? bounds.midY - 32 : practiceBox.maxY + 26,
+                                   width: practiceBox.width, height: 64)
         closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 132, width: practiceBox.width, height: 18)
     }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.withAlphaComponent(0.90).setFill()
         bounds.fill()
-        guard isPrimary else { return }
-        if (stage == .prompt || stage == .preparing), let icon = menuBarIcon, bounds.intersects(icon) {
+        guard isPrimary, stage != .preparing else { return }
+        if stage == .prompt, let icon = menuBarIcon, bounds.intersects(icon) {
             // Reveal only the 18-point icon. No surrounding highlight container.
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current?.compositingOperation = .clear
@@ -340,15 +351,20 @@ private struct TutorialInstruction: View {
     @ObservedObject var session: DictationSession
     @ObservedObject var practice: TutorialPractice
     let shortcut: String
-    private var stage: TutorialStage { .resolve(phase: session.phase, hasText: !practice.text.isEmpty) }
+    private var stage: TutorialStage { .resolve(phase: session.phase, hasText: !practice.text.isEmpty, hasPrepared: practice.isPrepared) }
 
     var body: some View {
         Group {
-            if stage == .processing {
+            if stage == .preparing {
+                HStack(spacing: 12) {
+                    TutorialPreparationSpinner()
+                    Text("Preparing").font(.system(size: 22, weight: .medium))
+                }
+            } else if stage == .processing {
                 Text("Transcribing on your Mac…").font(.system(size: 22, weight: .medium))
             } else {
                 HStack(spacing: 12) {
-                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "To use, press and hold")
+                    Text(stage == .listening ? "Keep holding" : stage == .result ? "Hold" : "To use, press and hold")
                     TutorialKeyVisual(session: session, shortcut: shortcut)
                     if stage == .result { Text("to try again") }
                 }
@@ -357,6 +373,24 @@ private struct TutorialInstruction: View {
         }
         .foregroundStyle(.white)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// An indeterminate amber ring; never suggests a fabricated loading percentage.
+private struct TutorialPreparationSpinner: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let gold = Color(red: 244 / 255, green: 178 / 255, blue: 65 / 255)
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+            ZStack {
+                Circle().stroke(gold.opacity(0.2), lineWidth: 2)
+                Circle().trim(from: 0.08, to: 0.75)
+                    .stroke(gold, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 2) * 180))
+            }
+            .frame(width: 20, height: 20)
+        }
+        .accessibilityHidden(true)
     }
 }
 
