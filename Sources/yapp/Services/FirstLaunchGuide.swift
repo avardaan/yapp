@@ -213,7 +213,7 @@ final class GuideCanvas: NSView {
         outputScroll.hasVerticalScroller = true
         outputScroll.scrollerStyle = .overlay
         outputScroll.documentView = output
-        closeHint.font = .systemFont(ofSize: 12)
+        closeHint.font = .systemFont(ofSize: 13)
         closeHint.textColor = .white.withAlphaComponent(0.55)
         closeHint.alignment = .center
         closeHint.isHidden = true
@@ -253,7 +253,7 @@ final class GuideCanvas: NSView {
     private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
     private var instructionFrame: NSRect {
         if stage == .preparing { return NSRect(x: practiceBox.minX, y: bounds.midY - 32, width: practiceBox.width, height: 64) }
-        return NSRect(x: practiceBox.minX, y: practiceBox.maxY + 26, width: practiceBox.width, height: 64)
+        return NSRect(x: bounds.minX + 32, y: practiceBox.maxY + 26, width: bounds.width - 64, height: 64)
     }
     private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty, hasPrepared: practice.isPrepared) }
 
@@ -271,14 +271,17 @@ final class GuideCanvas: NSView {
         bounds.fill()
         guard isPrimary, stage != .preparing else { return }
         if stage == .prompt, let icon = menuBarIcon, bounds.intersects(icon) {
-            // Reveal only the 18-point icon. No surrounding highlight container.
+            // Tight spotlight: clear just past the icon, then feather back to the dim so
+            // neighbouring menu bar items stay covered.
+            let spot = icon.insetBy(dx: -7, dy: -7)
             NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current?.compositingOperation = .clear
-            NSBezierPath(ovalIn: icon).fill()
+            NSGraphicsContext.current?.compositingOperation = .copy
+            NSGradient(colors: [.clear, .clear, NSColor.black.withAlphaComponent(0.90)], atLocations: [0, 0.6, 1],
+                       colorSpace: .sRGB)?.draw(in: NSBezierPath(ovalIn: spot), relativeCenterPosition: .zero)
             NSGraphicsContext.restoreGraphicsState()
             let label = NSRect(x: min(max(24, icon.midX - 205), bounds.maxX - 264),
                                y: icon.minY - 112, width: 240, height: 30)
-            drawText("yapp lives up here.", rect: label, size: 22, weight: .semibold)
+            drawCallout("yapp lives up here.", rect: label)
             let start = NSPoint(x: label.midX + 25, y: label.maxY + 7)
             let tip = NSPoint(x: icon.midX, y: icon.minY - 9)
             drawArrow(from: start, to: tip,
@@ -297,9 +300,9 @@ final class GuideCanvas: NSView {
         if stage == .listening {
             // Instructions stay above the box; the caption sits below it and points down to the floaty.
             let caption = "yappman’s listening…"
-            let width = (caption as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 16)]).width
+            let width = (caption as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: Self.callout.size, weight: Self.callout.weight)]).width
             let label = NSRect(x: practiceBox.midX - width / 2 - 4, y: practiceBox.minY - 46, width: width + 8, height: 24)
-            drawText(caption, rect: label, size: 16, color: NSColor.white.withAlphaComponent(0.75))
+            drawCallout(caption, rect: label)
             if let frame = floatyFrame, bounds.intersects(frame) {
                 let start = NSPoint(x: label.minX - 8, y: label.midY)
                 let side = max(label.minX - 140, bounds.minX + 24)
@@ -310,12 +313,12 @@ final class GuideCanvas: NSView {
             }
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
-            let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
+            let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: Self.callout.size, weight: Self.callout.weight)]).width) + 4)
             if practiceBox.minX >= labelWidth + 80 {
                 // Put the explanation beside the first line, with a short connector.
                 let tip = NSPoint(x: practiceBox.minX + 12, y: practiceBox.maxY - 33)
                 let label = NSRect(x: practiceBox.minX - labelWidth - 55, y: tip.y - 27, width: labelWidth, height: 54)
-                drawText(text, rect: label, size: 18, weight: .medium)
+                drawCallout(text, rect: label)
                 let start = NSPoint(x: label.maxX + 10, y: label.midY)
                 drawArrow(from: start, to: tip,
                           control1: NSPoint(x: start.x + 14, y: start.y - 8),
@@ -323,7 +326,7 @@ final class GuideCanvas: NSView {
             } else {
                 // Narrow screens use a compact upward arrow rather than an offscreen loop.
                 let label = NSRect(x: practiceBox.midX - labelWidth / 2, y: practiceBox.minY - 94, width: labelWidth, height: 54)
-                drawText(text, rect: label, size: 18, weight: .medium)
+                drawCallout(text, rect: label)
                 let start = NSPoint(x: label.midX, y: label.maxY + 8)
                 let tip = NSPoint(x: practiceBox.midX, y: practiceBox.minY - 8)
                 drawArrow(from: start, to: tip,
@@ -345,6 +348,12 @@ final class GuideCanvas: NSView {
         arrow.lineWidth = 1.5; arrow.lineCapStyle = .round; arrow.lineJoinStyle = .round; arrow.stroke()
     }
 
+    // Tutorial type scale: headline 20 medium (instructions), callout 17 medium at 80% (labels
+    // that point at things), hint 13 at 55%.
+    private static let callout = (size: CGFloat(17), weight: NSFont.Weight.medium, color: NSColor.white.withAlphaComponent(0.8))
+    private func drawCallout(_ text: String, rect: NSRect) {
+        drawText(text, rect: rect, size: Self.callout.size, weight: Self.callout.weight, color: Self.callout.color)
+    }
     private func drawText(_ text: String, rect: NSRect, size: CGFloat,
                           weight: NSFont.Weight = .regular, color: NSColor = .white) {
         let paragraph = NSMutableParagraphStyle(); paragraph.alignment = .center
@@ -364,19 +373,19 @@ private struct TutorialInstruction: View {
             if stage == .preparing {
                 HStack(spacing: 12) {
                     TutorialPreparationSpinner()
-                    Text("Preparing").font(.system(size: 22, weight: .medium))
+                    Text("Preparing").font(.system(size: 20, weight: .medium))
                 }
             } else if stage == .processing {
-                Text("Transcribing…").font(.system(size: 22, weight: .medium))
+                Text("Transcribing…").font(.system(size: 20, weight: .medium))
             } else if stage == .listening {
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     Text("While holding")
                     TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
                     Text("start speaking and release")
                     TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
                     Text("when you’re done.")
                 }
-                .font(.system(size: 17, weight: .medium))
+                .font(.system(size: 20, weight: .medium))
                 .fixedSize()
             } else {
                 HStack(spacing: 12) {
@@ -384,7 +393,7 @@ private struct TutorialInstruction: View {
                     TutorialKeyVisual(session: session, shortcut: shortcut)
                     if stage == .result { Text("to try again") }
                 }
-                .font(.system(size: stage == .result ? 19 : 22, weight: .medium))
+                .font(.system(size: 20, weight: .medium))
             }
         }
         .foregroundStyle(.white)
