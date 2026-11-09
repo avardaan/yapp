@@ -297,13 +297,13 @@ final class GuideCanvas: NSView {
 
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
             // The instructions stay above the box; loop around its left side down to the floaty.
-            // Start just before the "yappman's listening…" title.
-            let title = ("yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 22, weight: .medium)])
-            let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.maxY - 23)
+            // Start just before the "yappman's listening…" caption below the instructions.
+            let title = ("yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 16)])
+            let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.minY + 20)
             let side = max(practiceBox.minX - 200, bounds.minX + 24)
             let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: side - 80, y: start.y + 40),
+                      control1: NSPoint(x: side, y: start.y),
                       control2: NSPoint(x: side, y: tip.y - 10))
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
@@ -367,7 +367,6 @@ private struct TutorialInstruction: View {
                 Text("Transcribing…").font(.system(size: 22, weight: .medium))
             } else if stage == .listening {
                 VStack(spacing: 12) {
-                    Text("yappman’s listening…").font(.system(size: 22, weight: .medium))
                     HStack(spacing: 8) {
                         Text("While holding")
                         TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
@@ -375,9 +374,9 @@ private struct TutorialInstruction: View {
                         TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
                         Text("when you’re done.")
                     }
-                    .font(.system(size: 16))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .font(.system(size: 17, weight: .medium))
                     .fixedSize()
+                    Text("yappman’s listening…").font(.system(size: 16)).foregroundStyle(.white.opacity(0.75))
                 }
             } else {
                 HStack(spacing: 12) {
