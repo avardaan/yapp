@@ -297,12 +297,9 @@ final class GuideCanvas: NSView {
 
         if stage == .listening, let frame = floatyFrame, bounds.intersects(frame) {
             // The instructions stay above the box; loop around its left side down to the floaty.
-            // Start just before the "While holding…" line: three text runs, two 36pt keys, 8pt gaps.
-            let font = NSFont.systemFont(ofSize: 16)
-            let words = ["While holding", "start speaking and release", "when you’re done."]
-                .reduce(0) { $0 + ($1 as NSString).size(withAttributes: [.font: font]).width }
-            let lineWidth = words + 2 * 36 + 4 * 8
-            let start = NSPoint(x: instructionFrame.midX - lineWidth / 2 - 10, y: instructionFrame.minY + 27)
+            // Start just before the "Yappman's listening…" title.
+            let title = ("Yappman’s listening…" as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 22, weight: .medium)])
+            let start = NSPoint(x: instructionFrame.midX - title.width / 2 - 12, y: instructionFrame.maxY - 23)
             let side = max(min(practiceBox.minX - 56, start.x - 30), bounds.minX + 16)
             let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
