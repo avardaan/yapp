@@ -253,7 +253,7 @@ final class GuideCanvas: NSView {
     private var practiceBox: NSRect { Self.practiceFrame(in: bounds) }
     private var instructionFrame: NSRect {
         if stage == .preparing { return NSRect(x: practiceBox.minX, y: bounds.midY - 32, width: practiceBox.width, height: 64) }
-        return NSRect(x: bounds.minX + 32, y: practiceBox.maxY + 26, width: bounds.width - 64, height: 64)
+        return NSRect(x: bounds.minX + 32, y: practiceBox.maxY + 34, width: bounds.width - 64, height: 64)
     }
     private var stage: TutorialStage { .resolve(phase: phase, hasText: !displayedText.isEmpty, hasPrepared: practice.isPrepared) }
 
@@ -263,7 +263,7 @@ final class GuideCanvas: NSView {
         outputScroll.frame = practiceBox.insetBy(dx: 20, dy: 18)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
         instruction.frame = instructionFrame
-        closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.minY - 132, width: practiceBox.width, height: 18)
+        closeHint.frame = NSRect(x: practiceBox.minX, y: practiceBox.maxY + 12, width: practiceBox.width, height: 18)
     }
 
     override func draw(_ dirtyRect: NSRect) {
