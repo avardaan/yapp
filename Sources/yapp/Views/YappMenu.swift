@@ -36,7 +36,7 @@ struct YappMenu: View {
             }
         }
         Menu("Advanced") {
-            Button("Sonoscope…") { }
+            Button("Show Sonoscope") { }
                 .disabled(true)
             Menu("Diagnostics") {
                 Button("Sharing…") {
@@ -44,7 +44,7 @@ struct YappMenu: View {
                     NSApp.activate(ignoringOtherApps: true)
                 }
             }
-            Button("Open Tutorial…") { FirstLaunchGuide.shared.replay() }
+            Button("Show Tutorial") { FirstLaunchGuide.shared.replay() }
         }
         Button("Quit") { NSApp.terminate(nil) }
     }
