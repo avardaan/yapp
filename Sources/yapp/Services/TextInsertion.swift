@@ -6,6 +6,10 @@ final class TextInsertion {
     struct Target {
         let processID: pid_t
         let element: AXUIElement
+        var app = "unknown"
+        var role = "unknown"
+        /// Controlled metadata for diagnostics: the target app's bundle ID and AX role, never content.
+        var fields: [String: String] { ["target_app": app, "target_role": role] }
     }
 
     static var allowed: Bool { AXIsProcessTrusted() }
@@ -26,7 +30,10 @@ final class TextInsertion {
         var subrole: CFTypeRef?
         _ = AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subrole)
         guard subrole as? String != "AXSecureTextField" else { return nil }
-        return Target(processID: app.processIdentifier, element: element)
+        var role: CFTypeRef?
+        _ = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+        return Target(processID: app.processIdentifier, element: element, app: app.bundleIdentifier ?? "unknown",
+                      role: [role as? String, subrole as? String].compactMap { $0 }.joined(separator: "/"))
     }
 
     static func stillFocused(_ target: Target) -> Bool {
@@ -38,9 +45,12 @@ final class TextInsertion {
     // Never paste into a field/app the user switched to during transcription.
     static func insert(_ text: String, into target: Target?, dictation: UUID? = nil) async -> String? {
         let text = DictationText.clean(text)
-        guard !text.isEmpty else { log("empty_text", dictation: dictation); return "No speech detected" }
-        guard allowed else { log("accessibility_missing", dictation: dictation); return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
-        guard let target, stillFocused(target) else { log(target == nil ? "no_safe_target" : "focus_changed", dictation: dictation); return "Input focus changed; use Copy Last Transcript." }
+        func log(_ outcome: String, _ extra: [String: String] = [:]) {
+            Self.log(outcome, dictation: dictation, fields: (target?.fields ?? [:]).merging(["chars": String(text.count)]) { $1 }.merging(extra) { $1 })
+        }
+        guard !text.isEmpty else { log("empty_text"); return "No speech detected" }
+        guard allowed else { log("accessibility_missing"); return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
+        guard let target, stillFocused(target) else { log(target == nil ? "no_safe_target" : "focus_changed"); return "Input focus changed; use Copy Last Transcript." }
         // AXSelectedText writes can report success without producing editor
         // input events (notably in web/Electron editors). Use the normal Paste
         // command so the target app handles text through its regular input path.
@@ -54,7 +64,7 @@ final class TextInsertion {
         guard stillFocused(target),
               let down = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true),
               let up = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: false) else {
-            log("focus_or_event_unavailable", dictation: dictation)
+            log("focus_or_event_unavailable")
             return "Could not insert; use Copy Last Transcript."
         }
         clipboard.clearContents()
@@ -63,25 +73,26 @@ final class TextInsertion {
         down.flags = .maskCommand
         up.flags = .maskCommand
         guard stillFocused(target) else {
-            log("focus_changed", dictation: dictation)
-            restoreClipboard(saved, ifUnchanged: revision)
+            log("focus_changed", ["clipboard": restoreClipboard(saved, ifUnchanged: revision)])
             return "Input focus changed; use Copy Last Transcript."
         }
-        log("paste_dispatched", dictation: dictation)
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
         try? await Task.sleep(for: .milliseconds(350))
-        restoreClipboard(saved, ifUnchanged: revision)
+        // Focus after paste distinguishes "app swallowed/duplicated it" from "focus moved away".
+        log("paste_dispatched", ["clipboard": restoreClipboard(saved, ifUnchanged: revision),
+                                 "focus_after": String(stillFocused(target))])
         return nil
     }
 
-    private static func log(_ outcome: String, dictation: UUID?) {
-        Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, fields: ["outcome": outcome])
+    private static func log(_ outcome: String, dictation: UUID?, fields: [String: String]) {
+        Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, fields: fields.merging(["outcome": outcome]) { $1 })
     }
 
-    private static func restoreClipboard(_ saved: [[NSPasteboard.PasteboardType: Data]], ifUnchanged revision: Int) {
+    /// Returns a diagnostics label: restored, changed_meanwhile (left alone), or was_empty.
+    private static func restoreClipboard(_ saved: [[NSPasteboard.PasteboardType: Data]], ifUnchanged revision: Int) -> String {
         let clipboard = NSPasteboard.general
-        guard clipboard.changeCount == revision else { return }
+        guard clipboard.changeCount == revision else { return "changed_meanwhile" }
         clipboard.clearContents()
         let items = saved.map { values in
             let item = NSPasteboardItem()
@@ -89,5 +100,6 @@ final class TextInsertion {
             return item
         }
         if !items.isEmpty { clipboard.writeObjects(items) }
+        return items.isEmpty ? "was_empty" : "restored"
     }
 }

@@ -24,4 +24,8 @@ final class SilenceTests: XCTestCase {
         quiet.withUnsafeBufferPointer { speech.observe($0, sampleRate: 16000) }
         XCTAssertTrue(speech.hasActivity(sampleRate: 16000))
     }
+    func testRepeatDetectionFlagsBackToBackPhrasesOnly() {
+        XCTAssertTrue(DictationText.repeatsItself("Send it now. Send it now."))
+        XCTAssertFalse(DictationText.repeatsItself("I think that I think about it."))
+    }
 }

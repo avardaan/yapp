@@ -42,6 +42,7 @@ final class DictationSession: ObservableObject {
         shortcutOwnsRecording = true
         tutorialID = FirstLaunchGuide.shared.practiceID
         insertionTarget = tutorialID == nil ? TextInsertion.captureTarget() : nil
+        trace("target.captured", fields: insertionTarget?.fields ?? ["target_app": tutorialID == nil ? "none" : "tutorial"])
         if phase == .loading {
             waitingForModel = true
             trace("dictation.waiting_for_model")
@@ -204,8 +205,16 @@ final class DictationSession: ObservableObject {
             trace("transcription.started")
             let transcriptionStarted = ProcessInfo.processInfo.systemUptime
             let results = try await engine.transcribe(audioPath: url.path, decodeOptions: options)
-            trace("transcription.completed", fields: ["duration_ms": String(Diagnostics.milliseconds(since: transcriptionStarted))])
-            transcript = DictationText.clean(results.map(\.text).joined(separator: " "))
+            let raw = results.map(\.text).joined(separator: " ")
+            transcript = DictationText.clean(raw)
+            // Shape only, never words: lengths and whether the model repeated itself.
+            trace("transcription.completed", fields: [
+                "duration_ms": String(Diagnostics.milliseconds(since: transcriptionStarted)),
+                "segments": String(results.flatMap(\.segments).count),
+                "raw_chars": String(raw.count), "chars": String(transcript.count),
+                "words": String(transcript.split(whereSeparator: \.isWhitespace).count),
+                "repeated": String(DictationText.repeatsItself(transcript))
+            ])
             guard !transcript.isEmpty else {
                 finish("empty_or_annotation_rejected")
                 phase = .ready

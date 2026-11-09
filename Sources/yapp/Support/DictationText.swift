@@ -12,6 +12,19 @@ enum DictationText {
         // Leftover punctuation alone (e.g. "(laughs)." -> ".") is not speech.
         return cleaned.contains { $0.isLetter || $0.isNumber } ? cleaned : ""
     }
+
+    /// Diagnostics only: true when the text is a phrase of 3+ words repeated back to back,
+    /// e.g. "send it now send it now". Returns a flag, never the words.
+    static func repeatsItself(_ text: String) -> Bool {
+        let words = text.lowercased().split { !$0.isLetter && !$0.isNumber }
+        guard words.count >= 6 else { return false }
+        for size in 3...(words.count / 2) {
+            for start in 0...(words.count - 2 * size) where words[start..<start + size] == words[start + size..<start + 2 * size] {
+                return true
+            }
+        }
+        return false
+    }
 }
 
 /// Conservative near-silence gate, not a speech classifier. Ordinary background
