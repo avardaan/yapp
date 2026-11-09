@@ -33,7 +33,7 @@ final class AppUpdater: NSObject, ObservableObject, SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
         guard updateCheck == .updates else {
             throw NSError(domain: "com.zeroslop.yapp.updates", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Yapp checks for updates only when requested."])
+                          userInfo: [NSLocalizedDescriptionKey: "yapp checks for updates only when requested."])
         }
     }
 }

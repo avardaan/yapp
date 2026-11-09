@@ -279,7 +279,7 @@ final class GuideCanvas: NSView {
             NSGraphicsContext.restoreGraphicsState()
             let label = NSRect(x: min(max(24, icon.midX - 205), bounds.maxX - 264),
                                y: icon.minY - 112, width: 240, height: 30)
-            drawText("Yapp lives up here.", rect: label, size: 22, weight: .semibold)
+            drawText("yapp lives up here.", rect: label, size: 22, weight: .semibold)
             let start = NSPoint(x: label.midX + 25, y: label.maxY + 7)
             let tip = NSPoint(x: icon.midX, y: icon.minY - 9)
             drawArrow(from: start, to: tip,

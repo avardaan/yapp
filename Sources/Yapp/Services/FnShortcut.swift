@@ -148,7 +148,7 @@ final class FnShortcut: ObservableObject {
                 return Unmanaged.passUnretained(event)
             }, userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
-            status = "Restart Yapp after permission"
+            status = "Restart yapp after permission"
             return
         }
         tap = port

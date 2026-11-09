@@ -14,7 +14,7 @@ if [[ -f website/appcast.xml && ! -f "$ARCHIVES/appcast.xml" ]]; then
     cp website/appcast.xml "$ARCHIVES/appcast.xml"
 fi
 if [[ -f "docs/releases/$VERSION.md" ]]; then
-    for archive in "$ARCHIVES"/Yapp-"$VERSION"-*.zip; do
+    for archive in "$ARCHIVES"/yapp-"$VERSION"-*.zip; do
         cp "docs/releases/$VERSION.md" "${archive%.zip}.md"
     done
 fi

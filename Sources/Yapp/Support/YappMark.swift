@@ -3,7 +3,7 @@ import AppKit
 @MainActor
 enum YappMark {
     static var aboutImage: NSImage {
-        NSImage(named: "Yapp") ?? NSApp.applicationIconImage
+        NSImage(named: "yapp") ?? NSApp.applicationIconImage
     }
 
     static func menuImage(shortcutHeld: Bool = false) -> NSImage {

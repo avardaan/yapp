@@ -52,7 +52,7 @@ struct ActivityIndicatorView: View {
             .overlay(Capsule().strokeBorder(.white.opacity(0.03), lineWidth: 0.5))
             .accessibilityElement(children: .ignore)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: preparing)
-            .accessibilityLabel(preparing ? "Yapp preparing dictation" : processing ? "Yapp transcribing" : "Yapp recording")
+            .accessibilityLabel(preparing ? "yapp preparing dictation" : processing ? "yapp transcribing" : "yapp recording")
         }
     }
 }

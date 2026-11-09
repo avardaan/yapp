@@ -1,4 +1,4 @@
-# Yapp
+# yapp
 
 Runtime snapshot: 2026-11-01. Keep this guide concise; update it when architectural
 choices or requirements change, not for routine implementation changes.

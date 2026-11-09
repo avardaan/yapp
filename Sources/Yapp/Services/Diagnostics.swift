@@ -74,7 +74,7 @@ final class Diagnostics {
 
     func export() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "Yapp-Diagnostics.jsonl"
+        panel.nameFieldStringValue = "yapp-Diagnostics.jsonl"
         panel.allowedContentTypes = [.data]
         panel.message = "Save local diagnostics from this launch. No audio, transcripts, or clipboard contents are included."
         NSApp.activate(ignoringOtherApps: true)

@@ -1,9 +1,9 @@
-# Yapp
+# yapp
 
 Less clacking. More yapping.
 
 Free, offline, on-device English dictation for macOS. Hold Fn, speak, then release
-to insert text where you are writing. Yapp lives in the menu bar, with a small
+to insert text where you are writing. yapp lives in the menu bar, with a small
 sound-reactive indicator while recording. By [**Vardaan**](https://github.com/avardaan).
 
 [Website](https://yapp.now/) · [Downloads](https://github.com/avardaan/yapp/releases/latest)
@@ -15,7 +15,7 @@ sound-reactive indicator while recording. By [**Vardaan**](https://github.com/av
   not request Input Monitoring. Right Option and Right Control are alternatives.
 - No account, cloud transcription, or internet connection needed to dictate.
 
-WhisperKit/Core ML runs a bundled Whisper `base.en` model. Yapp keeps no persistent
+WhisperKit/Core ML runs a bundled Whisper `base.en` model. yapp keeps no persistent
 transcript history and deletes temporary recordings after completion or cancellation.
 Insertion requires the original input to remain focused; secure fields are excluded.
 Background noise can still cause recognition errors.
@@ -30,7 +30,7 @@ python3 script/download_model.py
 security find-identity -v -p codesigning
 export YAPP_SIGNING_IDENTITY="YOUR CERTIFICATE NAME OR FINGERPRINT"
 ./build.sh
-open build/Yapp.app
+open build/yapp.app
 ```
 
 Internet is needed to fetch build dependencies and model assets; the assembled app
@@ -45,7 +45,7 @@ local tokenizer files throw an error instead of downloading a fallback.
 
 Fn setup saves the previous Globe-key action before disabling the emoji action;
 selecting another shortcut restores the saved preference. Live keyboard preference
-refresh varies by macOS version. Yapp never logs speech, clipboard contents, or typed text.
+refresh varies by macOS version. yapp never logs speech, clipboard contents, or typed text.
 
 ## Updates
 
@@ -82,7 +82,7 @@ folder is uploaded to Pages. See [website/README.md](website/README.md).
 
 ## License
 
-Yapp’s original code is **GPL-3.0-only**. Copyright © 2026 zeroslop.
+yapp’s original code is **GPL-3.0-only**. Copyright © 2026 zeroslop.
 See [LICENSE](LICENSE) and [BRANDING.md](BRANDING.md).
 
 Sparkle 2.10.1 is BSD licensed with additional upstream notices; its full LICENSE

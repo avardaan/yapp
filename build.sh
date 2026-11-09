@@ -11,13 +11,13 @@ if [[ -z "$IDENTITY" ]]; then
     exit 1
 fi
 swift build -c release
-APP="$PWD/build/Yapp.app"
+APP="$PWD/build/yapp.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Models"
-cp .build/release/Yapp "$APP/Contents/MacOS/Yapp"
+cp .build/release/Yapp "$APP/Contents/MacOS/yapp"
 cp Info.plist "$APP/Contents/Info.plist"
-cp Resources/Yapp.icns "$APP/Contents/Resources/Yapp.icns"
+cp Resources/yapp.icns "$APP/Contents/Resources/yapp.icns"
 mkdir -p "$APP/Contents/Resources/Licenses"
-cp LICENSE "$APP/Contents/Resources/Licenses/Yapp-GPL-3.0.txt"
+cp LICENSE "$APP/Contents/Resources/Licenses/yapp-GPL-3.0.txt"
 cp -R Models/. "$APP/Contents/Resources/Models/"
 find .build -path '*release/*.bundle' -maxdepth 5 -type d -exec cp -R {} "$APP/Contents/Resources/" \;
 ./script/embed-sparkle.sh "$APP" "$IDENTITY" none

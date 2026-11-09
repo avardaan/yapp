@@ -9,7 +9,7 @@ No update network requests are needed for normal dictation or app launch.
 ## Identity and verification
 
 - Feed: https://yapp.now/appcast.xml (GitHub Pages, `website/appcast.xml`).
-- Archives: versioned GitHub Release ZIPs containing the stapled `Yapp.app`.
+- Archives: versioned GitHub Release ZIPs containing the stapled `yapp.app`.
 - `SUPublicEDKey` contains the public Ed25519 key. The private key is a Sparkle
   item in login Keychain, account `zeroslop.yapp`; never export it into the repo.
 - Developer ID signs the framework, helpers, and application inside-out. Sparkle
@@ -28,7 +28,7 @@ No update network requests are needed for normal dictation or app launch.
    symlinks intact, signs helpers/framework/app inside-out, notarizes and staples
    app and DMG, and checks Gatekeeper. It creates a fresh update ZIP after stapling.
 3. `script/generate-appcast.sh` uses Sparkle’s official tool and the Keychain key
-   to sign `build/distribution/updates/Yapp-<version>-arm64.zip` and generate its
+   to sign `build/distribution/updates/yapp-<version>-arm64.zip` and generate its
    appcast. It checks the public key matches Info.plist, preserves earlier feed
    entries, and disables delta generation. It does not publish anything.
 4. Upload the versioned DMG/checksum, stable `Yapp-arm64.dmg`/checksum, and
@@ -52,10 +52,10 @@ For an existing app, restore the existing key rather than generating a new one.
 On the development Mac, an updater-enabled test bundle signed with the same
 Developer ID and assigned build 2 was installed temporarily. The user ran
 Check for Updates → Install Update → Install and Relaunch against the live HTTPS
-feed and confirmed relaunch. The resulting `/Applications/Yapp.app` is 0.1.2
+feed and confirmed relaunch. The resulting `/Applications/yapp.app` is 0.1.2
 (build 3); its Info.plist, executable, and sealed-resource manifest match the
 notarized release. Deep signature verification, stapled ticket validation, and
-Gatekeeper assessment all passed; a new Yapp process was running. This tests the
+Gatekeeper assessment all passed; a new yapp process was running. This tests the
 real signed upgrade path on this Mac, not clean-install behavior on all Macs.
 
 Local and GitHub CI: 20 tests passed. The genuine update ZIP passed Ed25519

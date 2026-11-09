@@ -6,10 +6,10 @@ MODE="${1:---build}"
 IDENTITY="${YAPP_RELEASE_IDENTITY:?Set YAPP_RELEASE_IDENTITY to your Developer ID Application certificate}"
 PROFILE="${YAPP_NOTARY_PROFILE:-yapp-notary}"
 ROOT="$PWD/build/distribution"
-APP="$ROOT/Yapp.app"
+APP="$ROOT/yapp.app"
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Info.plist)
 ARCH=$(uname -m)
-DMG="$ROOT/Yapp-$VERSION-$ARCH.dmg"
+DMG="$ROOT/yapp-$VERSION-$ARCH.dmg"
 if [[ "$MODE" == --notarize ]]; then
     # Validate authentication before spending time building. Credentials stay in Keychain.
     xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null
@@ -25,14 +25,14 @@ BIN=$(swift build -c release --show-bin-path)
 # Rebuild only the disposable distribution directory, never the local development app.
 rm -rf "$ROOT"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/Models" "$APP/Contents/Resources/Licenses"
-cp "$BIN/Yapp" "$APP/Contents/MacOS/Yapp"
+cp "$BIN/Yapp" "$APP/Contents/MacOS/yapp"
 cp Info.plist "$APP/Contents/Info.plist"
-cp Resources/Yapp.icns "$APP/Contents/Resources/Yapp.icns"
+cp Resources/yapp.icns "$APP/Contents/Resources/yapp.icns"
 ditto Models "$APP/Contents/Resources/Models"
 cp Vendor/WhisperKit/LICENSE "$APP/Contents/Resources/Licenses/WhisperKit-LICENSE"
 cp Vendor/WhisperKit/NOTICES "$APP/Contents/Resources/Licenses/WhisperKit-NOTICES"
 cp Resources/Licenses/Whisper-LICENSE "$APP/Contents/Resources/Licenses/Whisper-LICENSE"
-cp LICENSE "$APP/Contents/Resources/Licenses/Yapp-GPL-3.0.txt"
+cp LICENSE "$APP/Contents/Resources/Licenses/yapp-GPL-3.0.txt"
 while IFS= read -r -d '' bundle; do
     ditto "$bundle" "$APP/Contents/Resources/$(basename "$bundle")"
 done < <(find "$BIN" -maxdepth 1 -type d -name '*.bundle' -print0)
@@ -45,8 +45,8 @@ codesign --force --sign "$IDENTITY" --options runtime --timestamp \
     --entitlements Resources/Release.entitlements "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 if [[ "$MODE" == --notarize ]]; then
-    ditto -c -k --keepParent "$APP" "$ROOT/Yapp.zip"
-    xcrun notarytool submit "$ROOT/Yapp.zip" --keychain-profile "$PROFILE" --wait --output-format plist > "$ROOT/app-notarization.plist"
+    ditto -c -k --keepParent "$APP" "$ROOT/yapp.zip"
+    xcrun notarytool submit "$ROOT/yapp.zip" --keychain-profile "$PROFILE" --wait --output-format plist > "$ROOT/app-notarization.plist"
     [[ "$(/usr/libexec/PlistBuddy -c 'Print status' "$ROOT/app-notarization.plist")" == Accepted ]] || {
         echo "Notarization failed; inspect $ROOT/app-notarization.plist and fetch the submission log." >&2; exit 1;
     }
@@ -55,9 +55,9 @@ if [[ "$MODE" == --notarize ]]; then
     spctl --assess --type execute --verbose=2 "$APP"
 fi
 mkdir "$ROOT/staging"
-ditto "$APP" "$ROOT/staging/Yapp.app"
+ditto "$APP" "$ROOT/staging/yapp.app"
 ln -s /Applications "$ROOT/staging/Applications"
-hdiutil create -volname Yapp -srcfolder "$ROOT/staging" -format UDZO -ov "$DMG"
+hdiutil create -volname yapp -srcfolder "$ROOT/staging" -format UDZO -ov "$DMG"
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 codesign --verify --strict --verbose=2 "$DMG"
 if [[ "$MODE" == --notarize ]]; then
@@ -71,13 +71,13 @@ else
     echo "Signed DMG (NOT notarized; do not publish yet): $DMG"
 fi
 (cd "$ROOT" && shasum -a 256 "$(basename "$DMG")") > "$DMG.sha256"
-# Stable filename for GitHub's /releases/latest/download/ URL. Keep the versioned
+# Legacy stable filename for older /releases/latest/download/ links (pre-lowercase rename). Keep the versioned
 # artifact too, so existing direct download links and checksums remain valid.
 cp "$DMG" "$ROOT/Yapp-$ARCH.dmg"
 (cd "$ROOT" && shasum -a 256 "Yapp-$ARCH.dmg") > "$ROOT/Yapp-$ARCH.dmg.sha256"
 if [[ "$MODE" == --notarize ]]; then
     # Re-archive after stapling; this is the exact archive Sparkle will verify/install.
     mkdir -p "$ROOT/updates"
-    ditto -c -k --sequesterRsrc --keepParent "$APP" "$ROOT/updates/Yapp-$VERSION-$ARCH.zip"
+    ditto -c -k --sequesterRsrc --keepParent "$APP" "$ROOT/updates/yapp-$VERSION-$ARCH.zip"
     ./script/generate-appcast.sh "$ROOT/updates"
 fi

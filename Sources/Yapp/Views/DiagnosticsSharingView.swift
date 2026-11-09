@@ -10,7 +10,7 @@ struct DiagnosticsSharingView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Share diagnostics")
                     .font(.title2.weight(.semibold))
-                Text("Help improve Yapp by sharing diagnostic logs.")
+                Text("Help improve yapp by sharing diagnostic logs.")
                     .foregroundStyle(.secondary)
             }
 
