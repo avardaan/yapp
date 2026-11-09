@@ -361,7 +361,7 @@ private struct TutorialInstruction: View {
                     Text("Preparing").font(.system(size: 22, weight: .medium))
                 }
             } else if stage == .processing {
-                Text("Transcribing on your Mac…").font(.system(size: 22, weight: .medium))
+                Text("Transcribing…").font(.system(size: 22, weight: .medium))
             } else {
                 HStack(spacing: 12) {
                     Text(stage == .listening ? "Keep holding" : stage == .result ? "Hold" : "To use, press and hold")
