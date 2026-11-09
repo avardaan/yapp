@@ -381,9 +381,7 @@ private struct TutorialInstruction: View {
                 HStack(spacing: 12) {
                     Text("While holding")
                     TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
-                    Text("start speaking and release")
-                    TutorialKeyVisual(session: session, shortcut: shortcut, compact: true)
-                    Text("when you’re done.")
+                    Text("start speaking, then release when you’re done.")
                 }
                 .font(.system(size: 20, weight: .medium))
                 .fixedSize()
