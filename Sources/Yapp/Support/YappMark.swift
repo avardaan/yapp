@@ -6,10 +6,10 @@ enum YappMark {
         NSImage(named: "Yapp") ?? NSApp.applicationIconImage
     }
 
-    static func menuImage(for phase: DictationSession.Phase, shortcutHeld: Bool = false) -> NSImage {
-        let image = NSImage(size: NSSize(width: 21, height: 18), flipped: false) { rect in
+    static func menuImage(shortcutHeld: Bool = false) -> NSImage {
+        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { rect in
             NSColor.labelColor.setFill()
-            let center = NSPoint(x: 8.5, y: 9)
+            let center = NSPoint(x: rect.midX, y: rect.midY)
             if shortcutHeld {
                 let mouth = NSBezierPath()
                 mouth.move(to: center)
@@ -29,11 +29,6 @@ enum YappMark {
                 mouth.lineCapStyle = .round
                 mouth.stroke()
                 NSGraphicsContext.restoreGraphicsState()
-            }
-            if phase == .transcribing {
-                NSBezierPath(ovalIn: NSRect(x: 17, y: 7.5, width: 3, height: 3)).fill()
-            } else if phase == .recording {
-                NSBezierPath(ovalIn: NSRect(x: 17, y: 7, width: 4, height: 4)).fill()
             }
             return true
         }
