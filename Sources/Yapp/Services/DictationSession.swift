@@ -215,7 +215,7 @@ final class DictationSession: ObservableObject {
                 return
             }
             if let tutorialID {
-                let delivered = FirstLaunchGuide.shared.practice.receive(transcript, for: tutorialID)
+                let delivered = FirstLaunchGuide.shared.receivePracticeText(transcript, for: tutorialID)
                 finish(delivered ? "tutorial_displayed" : "tutorial_closed")
                 transcript = ""
                 phase = .ready

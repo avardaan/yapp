@@ -27,6 +27,7 @@ final class FirstLaunchGuide {
     var practiceID: UUID? { practice.id }
     private var panels: [NSPanel] = []
     private var timer: Timer?
+    private var completionTask: Task<Void, Never>?
     private var waitingReason: String?
     private var globalEscape: Any?
     private var localEscape: Any?
@@ -94,7 +95,6 @@ final class FirstLaunchGuide {
             let localAnchor = screen == targetScreen ? anchor.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY) : nil
             let canvas = GuideCanvas(frame: NSRect(origin: .zero, size: screen.frame.size), anchor: localAnchor,
                                      shortcut: FnShortcut.shared.selected.title, practice: practice)
-            canvas.onDone = { [weak self] in self?.dismiss() }
             panel.contentView = canvas
             panel.orderFrontRegardless()
             panels.append(panel)
@@ -118,6 +118,20 @@ final class FirstLaunchGuide {
         Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", detail: true, fields: ["reason": reason])
     }
 
+    @discardableResult
+    func receivePracticeText(_ text: String, for id: UUID) -> Bool {
+        guard practice.receive(text, for: id) else { return false }
+        completionTask?.cancel()
+        completionTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            guard let self, self.practiceID == id,
+                  DictationSession.shared.phase == .ready,
+                  !DictationSession.shared.shortcutOwnsRecording else { return }
+            self.dismiss()
+        }
+        return true
+    }
+
     func dismiss() {
         guard !panels.isEmpty else { return }
         Diagnostics.shared.record("onboarding.completed", category: "Onboarding")
@@ -127,6 +141,7 @@ final class FirstLaunchGuide {
 
     func shutdown() {
         timer?.invalidate(); timer = nil
+        completionTask?.cancel(); completionTask = nil
         if let id = practiceID { DictationSession.shared.cancelTutorial(id: id) }
         practice.end()
         panels.forEach { $0.close() }; panels.removeAll()
@@ -159,13 +174,12 @@ final class GuideCanvas: NSView {
     private var phase = DictationSession.Phase.ready
     private let output = NSTextView()
     private let outputScroll = NSScrollView()
-    private let hint = NSTextField(labelWithString: "")
-    private let done = NSButton(title: "Done", target: nil, action: nil)
-    var onDone: (() -> Void)?
+    private let keyVisual: NSHostingView<TutorialKeyVisual>
     private let gold = NSColor(srgbRed: 244/255, green: 178/255, blue: 65/255, alpha: 1)
 
     init(frame: NSRect, anchor: NSRect?, shortcut: String, practice: TutorialPractice) {
         self.anchor = anchor; self.shortcut = shortcut; self.practice = practice
+        keyVisual = NSHostingView(rootView: TutorialKeyVisual(session: .shared, shortcut: shortcut))
         super.init(frame: frame)
         guard anchor != nil else { return }
         output.font = .systemFont(ofSize: 19)
@@ -183,12 +197,19 @@ final class GuideCanvas: NSView {
         outputScroll.hasVerticalScroller = true
         outputScroll.scrollerStyle = .overlay
         outputScroll.documentView = output
-        hint.font = .systemFont(ofSize: 12)
-        hint.textColor = .white.withAlphaComponent(0.65)
-        done.bezelStyle = .rounded
-        done.target = self; done.action = #selector(finish)
-        done.setAccessibilityLabel("Finish Yapp tutorial")
-        addSubview(outputScroll); addSubview(hint); addSubview(done)
+        addSubview(outputScroll); addSubview(keyVisual)
+        keyVisual.alphaValue = 0
+        // First locate Yapp in the menu bar, then bring the single action into focus.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self else { return }
+            if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { self.keyVisual.alphaValue = 1 }
+            else {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.3
+                    self.keyVisual.animator().alphaValue = 1
+                }
+            }
+        }
         practice.$text.sink { [weak self] text in
             self?.output.string = text
             self?.output.scrollToEndOfDocument(nil)
@@ -196,10 +217,8 @@ final class GuideCanvas: NSView {
         }.store(in: &observations)
         DictationSession.shared.$phase.sink { [weak self] phase in
             self?.phase = phase
-            self?.updateHint()
             self?.needsDisplay = true
         }.store(in: &observations)
-        updateHint()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -212,30 +231,14 @@ final class GuideCanvas: NSView {
         return NSRect(x: x, y: top - height, width: width, height: height)
     }
     private var practiceBox: NSRect {
-        NSRect(x: card.minX + 22, y: card.minY + 68, width: card.width - 44, height: 118)
+        NSRect(x: card.minX + 22, y: card.minY + 24, width: card.width - 44, height: 104)
     }
     override func layout() {
         super.layout()
         guard anchor != nil else { return }
         outputScroll.frame = practiceBox.insetBy(dx: 15, dy: 14)
         output.setFrameSize(NSSize(width: outputScroll.contentSize.width, height: outputScroll.contentSize.height))
-        hint.frame = NSRect(x: card.minX + 22, y: card.minY + 26, width: max(0, card.width - 118), height: 18)
-        done.frame = NSRect(x: card.maxX - 90, y: card.minY + 20, width: 70, height: 30)
-    }
-    @objc private func finish() { onDone?() }
-
-    private func updateHint() {
-        switch phase {
-        case .loading: hint.stringValue = "Getting ready…"
-        case .requestingPermission: hint.stringValue = "Checking microphone access…"
-        case .recording: hint.stringValue = "Listening… Release \(shortcut) to transcribe."
-        case .transcribing: hint.stringValue = "Transcribing on your Mac…"
-        case .failed: hint.stringValue = "Couldn’t load the model. Esc to close."
-        case .ready:
-            hint.stringValue = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized && TextInsertion.allowed
-                ? "Try it here. Release to transcribe. Esc to close."
-                : "Allow permissions in Yapp’s Permissions menu."
-        }
+        keyVisual.frame = NSRect(x: card.midX - 56, y: card.maxY - 196, width: 112, height: 124)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -265,22 +268,58 @@ final class GuideCanvas: NSView {
         NSColor.white.withAlphaComponent(0.12).setStroke(); surface.lineWidth = 1; surface.stroke()
         drawText("Yapp lives up here.", rect: NSRect(x: card.minX + 22, y: card.maxY - 56, width: card.width - 44, height: 34),
                  font: .systemFont(ofSize: 25, weight: .semibold), color: .white)
-        drawText("Closed mouths don’t get fed, so hold \(shortcut) and start yapping to test it out.",
-                 rect: NSRect(x: card.minX + 22, y: card.maxY - 132, width: card.width - 44, height: 62),
-                 font: .systemFont(ofSize: 17), color: .white.withAlphaComponent(0.85))
-
         let box = NSBezierPath(roundedRect: practiceBox, xRadius: 10, yRadius: 10)
         NSColor.black.withAlphaComponent(0.22).setFill(); box.fill()
         gold.withAlphaComponent(phase == .recording ? 0.8 : 0.35).setStroke()
         box.lineWidth = 1; box.stroke()
         if practice.text.isEmpty {
-            drawText("Your words will appear here…", rect: NSRect(x: practiceBox.minX + 19, y: practiceBox.maxY - 42, width: practiceBox.width - 34, height: 25),
-                     font: .systemFont(ofSize: 17), color: .white.withAlphaComponent(0.38))
             gold.setFill()
             NSRect(x: practiceBox.minX + 14, y: practiceBox.maxY - 37, width: 1.5, height: 21).fill()
         }
     }
     private func drawText(_ text: String, rect: NSRect, font: NSFont, color: NSColor) {
         (text as NSString).draw(in: rect, withAttributes: [.font: font, .foregroundColor: color])
+    }
+}
+
+/// A visual key, not a clickable button: the physical shortcut is the tutorial's action.
+private struct TutorialKeyVisual: View {
+    @ObservedObject var session: DictationSession
+    let shortcut: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private let gold = Color(red: 244 / 255, green: 178 / 255, blue: 65 / 255)
+
+    var body: some View {
+        let pressed = session.shortcutOwnsRecording
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || pressed)) { timeline in
+            let bob = reduceMotion || pressed ? 0 : sin(timeline.date.timeIntervalSinceReferenceDate * 3) * 3
+            VStack(spacing: 12) {
+                Image(systemName: "arrow.down")
+                    .font(.system(size: 19, weight: .light))
+                    .foregroundStyle(gold.opacity(pressed ? 0 : 0.75))
+                    .offset(y: bob)
+                    .accessibilityHidden(true)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 17)
+                        .fill(.black.opacity(0.65))
+                        .offset(y: 7)
+                    RoundedRectangle(cornerRadius: 17)
+                        .fill(pressed ? gold.opacity(0.14) : Color.white.opacity(0.08))
+                        .overlay(RoundedRectangle(cornerRadius: 17)
+                            .strokeBorder(pressed ? gold : Color.white.opacity(0.3), lineWidth: 1))
+                        .overlay(Text(shortcut).font(.system(size: 27, weight: .medium))
+                            .foregroundStyle(pressed ? gold : .white))
+                        .offset(y: pressed ? 6 : 0)
+                        .shadow(color: pressed ? gold.opacity(0.12) : .clear, radius: 12)
+                }
+                .frame(width: 78, height: 72)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Hold \(shortcut) to try dictation")
+        .accessibilityValue(pressed ? "Pressed" : "Not pressed")
+        .allowsHitTesting(false)
     }
 }

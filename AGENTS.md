@@ -28,7 +28,8 @@ choices or requirements change, not for routine implementation changes.
   silently download models or fall back to cloud services.
 - **Permissions:** Microphone and Accessibility only for the normal flow. A one-time nonactivating menu-bar guide appears after permissions and model readiness;
   it includes a transient practice box. Shortcut holds dictate into that box until
-  Done/Escape closes it; never paste practice text into another app. Request Microphone at first launch, then Accessibility; never
+  it closes automatically after a successful practice result (Escape can dismiss).
+  Never paste practice text into another app. Request Microphone at first launch, then Accessibility; never
   start recording merely because permission was granted. The Accessibility-only listener is verified on the development
   Mac; clean-install and supported-macOS testing remain release requirements.
 - **Safe insertion:** use normal Paste only into the original, still-focused,
