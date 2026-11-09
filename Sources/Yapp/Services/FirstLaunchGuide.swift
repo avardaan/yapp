@@ -292,7 +292,7 @@ final class GuideCanvas: NSView {
             drawArrow(from: start, to: tip,
                       control1: NSPoint(x: start.x, y: tip.y + 24), control2: NSPoint(x: tip.x, y: tip.y + 25))
         } else if stage == .result {
-            let text = "Transcribed text appears in the active text input"
+            let text = "Transcribed text appears in the active input"
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4)
             if practiceBox.minX >= labelWidth + 80 {
                 // Put the explanation beside the first line, with a short connector.
