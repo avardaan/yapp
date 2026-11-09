@@ -30,19 +30,25 @@ final class FirstLaunchGuide {
     private var waitingReason: String?
     private var globalEscape: Any?
     private var localEscape: Any?
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
+    private var manuallyRequested = false
+    var isPending: Bool { timer != nil }
+
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     private let completionKey = "completedFirstLaunchGuide"
 
     func start() {
         guard !CommandLine.arguments.contains("--smoke-audio"),
               !CommandLine.arguments.contains("--about"),
               (!defaults.bool(forKey: completionKey) || CommandLine.arguments.contains("--show-guide")) else { return }
+        manuallyRequested = false
         schedulePresentation()
     }
 
     /// Replay without clearing preferences or permission grants.
     func replay() {
         shutdown()
+        manuallyRequested = true
         schedulePresentation()
     }
 
@@ -56,9 +62,11 @@ final class FirstLaunchGuide {
 
     private func showIfReady() {
         let reason: String?
-        if DictationSession.shared.phase != .ready { reason = "model_not_ready" }
-        else if AVCaptureDevice.authorizationStatus(for: .audio) != .authorized { reason = "microphone_permission" }
-        else if !TextInsertion.allowed { reason = "accessibility_permission" }
+        let phase = DictationSession.shared.phase
+        if phase == .recording || phase == .transcribing || phase == .requestingPermission { reason = "dictation_busy" }
+        else if !manuallyRequested && phase != .ready { reason = "model_not_ready" }
+        else if !manuallyRequested && AVCaptureDevice.authorizationStatus(for: .audio) != .authorized { reason = "microphone_permission" }
+        else if !manuallyRequested && !TextInsertion.allowed { reason = "accessibility_permission" }
         else { reason = nil }
         if let reason { waiting(reason); return }
         // MenuBarExtra can render its label without hosting the background NSView.
@@ -108,15 +116,6 @@ final class FirstLaunchGuide {
         guard waitingReason != reason else { return }
         waitingReason = reason
         Diagnostics.shared.record("onboarding.waiting", category: "Onboarding", detail: true, fields: ["reason": reason])
-    }
-
-    /// Starting dictation also consumes a guide that is still waiting to appear.
-    func completeFromShortcut() {
-        // A visible tutorial stays open so dictation can fill its practice box.
-        guard practiceID == nil, timer != nil || !panels.isEmpty else { return }
-        Diagnostics.shared.record("onboarding.completed", category: "Onboarding", fields: ["reason": "dictation_started"])
-        defaults.set(true, forKey: completionKey)
-        shutdown()
     }
 
     func dismiss() {
@@ -232,7 +231,10 @@ final class GuideCanvas: NSView {
         case .recording: hint.stringValue = "Listening… Release \(shortcut) to transcribe."
         case .transcribing: hint.stringValue = "Transcribing on your Mac…"
         case .failed: hint.stringValue = "Couldn’t load the model. Esc to close."
-        case .ready: hint.stringValue = "Try it here. Release to transcribe. Esc to close."
+        case .ready:
+            hint.stringValue = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized && TextInsertion.allowed
+                ? "Try it here. Release to transcribe. Esc to close."
+                : "Allow permissions in Yapp’s Permissions menu."
         }
     }
 

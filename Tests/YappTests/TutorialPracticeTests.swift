@@ -26,4 +26,21 @@ final class TutorialPracticeTests: XCTestCase {
         XCTAssertTrue(practice.text.isEmpty)
         XCTAssertNotEqual(practice.id, old)
     }
+    @MainActor
+    func testFreshLaunchSchedulesTutorialAndCompletedLaunchDoesNot() {
+        let name = "YappTutorialTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let guide = FirstLaunchGuide(defaults: defaults)
+        guide.start()
+        XCTAssertTrue(guide.isPending)
+        guide.shutdown()
+        defaults.set(true, forKey: "completedFirstLaunchGuide")
+        guide.start()
+        XCTAssertFalse(guide.isPending)
+        guide.replay()
+        XCTAssertTrue(guide.isPending)
+        guide.shutdown()
+    }
+
 }

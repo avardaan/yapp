@@ -57,7 +57,6 @@ final class DictationSession: ObservableObject {
         pendingShortcut = Task { [weak self] in
             guard !Task.isCancelled else { return }
             guard let self, self.shortcutOwnsRecording, self.phase == .ready else { return }
-            FirstLaunchGuide.shared.completeFromShortcut()
             self.start()
             self.waitingForModel = false
         }

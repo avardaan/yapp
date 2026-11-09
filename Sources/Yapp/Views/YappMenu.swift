@@ -47,8 +47,7 @@ struct YappMenu: View {
                 .pickerStyle(.inline)
                 .labelsHidden()
             }
-            Button("Tutorial…") { FirstLaunchGuide.shared.replay() }
-                .disabled(session.phase != .ready || !TextInsertion.allowed || AVCaptureDevice.authorizationStatus(for: .audio) != .authorized)
+            Button("Open Tutorial…") { FirstLaunchGuide.shared.replay() }
         }
         Button("Quit") { NSApp.terminate(nil) }
     }
