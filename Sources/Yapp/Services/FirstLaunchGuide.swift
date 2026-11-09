@@ -3,9 +3,28 @@ import AVFoundation
 import SwiftUI
 import Combine
 
+/// Locate only the icon itself, never a neighboring app's menu-bar space.
+struct MenuBarIconAnchor: NSViewRepresentable {
+    static func iconFrame(in rect: NSRect) -> NSRect {
+        NSRect(x: rect.midX - 9, y: rect.midY - 9, width: 18, height: 18)
+    }
+    func makeNSView(context: Context) -> AnchorView { AnchorView() }
+    func updateNSView(_ view: AnchorView, context: Context) { view.report() }
+    final class AnchorView: NSView {
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); report() }
+        override func layout() { super.layout(); report() }
+        func report() {
+            guard let window, bounds.width > 0, bounds.height > 0 else { return }
+            let rect = MenuBarIconAnchor.iconFrame(in: window.convertToScreen(convert(bounds, to: nil)))
+            DispatchQueue.main.async { FirstLaunchGuide.shared.menuBarIcon = rect }
+        }
+    }
+}
+
 @MainActor
 final class FirstLaunchGuide {
     static let shared = FirstLaunchGuide()
+    var menuBarIcon: NSRect?
     private(set) var tutorialScreen: NSScreen?
     let practice = TutorialPractice()
     var practiceID: UUID? { practice.id }
@@ -53,7 +72,11 @@ final class FirstLaunchGuide {
         else if !manuallyRequested && !TextInsertion.allowed { reason = "accessibility_permission" }
         else { reason = nil }
         if let reason { waiting(reason); return }
-        guard let targetScreen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main else { return }
+        let icon = menuBarIcon ?? NSApp.windows.first(where: {
+            $0.className.contains("StatusBar") && $0.frame.width > 0 && $0.frame.height <= 50
+        }).map { MenuBarIconAnchor.iconFrame(in: $0.frame) }
+        let iconScreen = icon.flatMap { rect in NSScreen.screens.first { $0.frame.intersects(rect) } }
+        guard let targetScreen = iconScreen ?? NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main else { return }
         tutorialScreen = targetScreen
         waitingReason = nil
         Diagnostics.shared.record("onboarding.shown", category: "Onboarding")
@@ -70,7 +93,7 @@ final class FirstLaunchGuide {
             panel.isReleasedWhenClosed = false
             let canvas = GuideCanvas(frame: NSRect(origin: .zero, size: screen.frame.size),
                                      screenOrigin: screen.frame.origin, isPrimary: screen == targetScreen,
-                                     shortcut: FnShortcut.shared.selected.title, practice: practice)
+                                     shortcut: FnShortcut.shared.selected.title, practice: practice, menuBarIcon: icon)
             panel.contentView = canvas
             panel.orderFrontRegardless()
             panels.append(panel)
@@ -154,6 +177,7 @@ final class GuideCanvas: NSView {
     private var phase = DictationSession.Phase.ready
     private var displayedText = ""
     private var floatyFrame: NSRect?
+    private let menuBarIcon: NSRect?
     private let output = NSTextView()
     private let outputScroll = NSScrollView()
     private let closeHint = NSTextField(labelWithString: "Esc to close")
@@ -161,9 +185,10 @@ final class GuideCanvas: NSView {
     private let gold = NSColor(srgbRed: 244/255, green: 178/255, blue: 65/255, alpha: 1)
 
     init(frame: NSRect, screenOrigin: NSPoint, isPrimary: Bool, shortcut: String, practice: TutorialPractice,
-         session: DictationSession? = nil, activityFrames: AnyPublisher<NSRect?, Never>? = nil) {
+         menuBarIcon: NSRect? = nil, session: DictationSession? = nil, activityFrames: AnyPublisher<NSRect?, Never>? = nil) {
         let session = session ?? DictationSession.shared
         self.screenOrigin = screenOrigin; self.isPrimary = isPrimary; self.practice = practice
+        self.menuBarIcon = menuBarIcon?.offsetBy(dx: -screenOrigin.x, dy: -screenOrigin.y)
         instruction = NSHostingView(rootView: TutorialInstruction(session: session, practice: practice, shortcut: shortcut))
         super.init(frame: frame)
         guard isPrimary else { return }
@@ -229,9 +254,23 @@ final class GuideCanvas: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        NSColor.black.withAlphaComponent(0.64).setFill()
+        NSColor.black.withAlphaComponent(0.84).setFill()
         bounds.fill()
         guard isPrimary else { return }
+        if (stage == .prompt || stage == .preparing), let icon = menuBarIcon, bounds.intersects(icon) {
+            // Reveal only the 18-point icon. No surrounding highlight container.
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSBezierPath(ovalIn: icon).fill()
+            NSGraphicsContext.restoreGraphicsState()
+            let label = NSRect(x: bounds.midX - 170, y: min(practiceBox.maxY + 136, bounds.maxY - 54), width: 340, height: 30)
+            drawText("Yapp lives up here.", rect: label, size: 22, weight: .semibold)
+            let start = NSPoint(x: label.maxX + 8, y: label.midY)
+            let tip = NSPoint(x: icon.midX, y: icon.minY - 9)
+            drawArrow(from: start, to: tip,
+                      control1: NSPoint(x: max(start.x, tip.x - 60), y: start.y),
+                      control2: NSPoint(x: tip.x, y: tip.y - 65))
+        }
         let box = NSBezierPath(roundedRect: practiceBox, xRadius: 14, yRadius: 14)
         NSColor(srgbRed: 0.08, green: 0.08, blue: 0.09, alpha: 0.95).setFill(); box.fill()
         (stage == .listening ? gold.withAlphaComponent(0.55) : NSColor.white.withAlphaComponent(0.18)).setStroke()
@@ -293,7 +332,7 @@ private struct TutorialInstruction: View {
                 Text("Transcribing on your Mac…").font(.system(size: 22, weight: .medium))
             } else {
                 HStack(spacing: 12) {
-                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "Press and hold")
+                    Text(stage == .listening ? "Keep holding" : stage == .preparing ? "Getting ready" : stage == .result ? "Hold" : "To use Yapp, press and hold")
                     TutorialKeyVisual(session: session, shortcut: shortcut)
                     if stage == .result { Text("to try again") }
                 }

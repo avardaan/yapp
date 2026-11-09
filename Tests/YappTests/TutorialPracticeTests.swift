@@ -64,4 +64,14 @@ final class TutorialPracticeTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testMenuCalloutUsesOnlyIconBounds() {
+        let host = NSRect(x: 100, y: 800, width: 80, height: 30)
+        let icon = MenuBarIconAnchor.iconFrame(in: host)
+        XCTAssertEqual(icon.size, NSSize(width: 18, height: 18))
+        XCTAssertEqual(icon.midX, host.midX)
+        XCTAssertEqual(icon.midY, host.midY)
+        XCTAssertTrue(host.contains(icon))
+    }
+
 }
