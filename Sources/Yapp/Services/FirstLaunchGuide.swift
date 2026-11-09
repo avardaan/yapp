@@ -303,7 +303,7 @@ final class GuideCanvas: NSView {
             let side = max(practiceBox.minX - 200, bounds.minX + 24)
             let tip = NSPoint(x: frame.minX - 8, y: frame.midY + 6)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: side, y: start.y + 10),
+                      control1: NSPoint(x: side - 80, y: start.y + 40),
                       control2: NSPoint(x: side, y: tip.y - 10))
         } else if stage == .result {
             let text = "Transcribed text appears in the active input"
