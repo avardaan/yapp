@@ -15,13 +15,19 @@ struct YappApp: App {
                 .background(MenuBarIconAnchor().frame(width: 18, height: 18))
         }
         .menuBarExtraStyle(.menu)
+
+        Window("Share Diagnostics", id: DiagnosticsSharingView.windowID) {
+            DiagnosticsSharingView()
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Menu-bar-only is intentional: no windows and no Dock activation.
+        // Menu-bar-only is intentional: utility dialogs open on demand, with no Dock icon.
         NSApp.setActivationPolicy(.accessory)
         Diagnostics.shared.record("app.launched", category: "Lifecycle", fields: [
             "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",

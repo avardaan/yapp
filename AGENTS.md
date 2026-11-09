@@ -6,7 +6,7 @@ choices or requirements change, not for routine implementation changes.
 ## Runtime architecture
 
 - Native macOS menu-bar app: SwiftUI UI with small AppKit bridges. No Dock icon
-  or main window; a nonactivating activity bar and standard About dialog are allowed.
+  or main window; a nonactivating activity bar, About dialog, and on-demand diagnostic sharing dialog are allowed.
 - Holding the shortcut during model loading shows an indeterminate preparation pill;
   continue into recording only if still held when ready. Early release cancels.
 - Flow: hold shortcut → capture focused input → record audio → release → reject

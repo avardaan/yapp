@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 
 struct YappMenu: View {
+    @Environment(\.openWindow) private var openWindow
     @ObservedObject var session: DictationSession
     @ObservedObject private var shortcut = FnShortcut.shared
     @ObservedObject private var updater = AppUpdater.shared
@@ -37,6 +38,12 @@ struct YappMenu: View {
         Menu("Advanced") {
             Button("Sonoscope…") { }
                 .disabled(true)
+            Menu("Diagnostics") {
+                Button("Share…") {
+                    openWindow(id: DiagnosticsSharingView.windowID)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
             Button("Open Tutorial…") { FirstLaunchGuide.shared.replay() }
         }
         Button("Quit") { NSApp.terminate(nil) }
