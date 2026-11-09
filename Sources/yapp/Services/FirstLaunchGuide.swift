@@ -312,7 +312,7 @@ final class GuideCanvas: NSView {
                           control2: NSPoint(x: side, y: tip.y - 10))
             }
         } else if stage == .result {
-            let text = "Transcribed text appears in the active input"
+            let text = "Your words appear wherever your cursor is."
             let labelWidth = min(240, ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: Self.callout.size, weight: Self.callout.weight)]).width) + 4)
             if practiceBox.minX >= labelWidth + 80 {
                 // Put the explanation beside the first line, with a short connector.
