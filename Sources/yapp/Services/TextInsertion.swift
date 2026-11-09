@@ -36,7 +36,7 @@ final class TextInsertion {
 
     // Return nil after sending Paste, or an explanatory status if insertion is unsafe or unavailable.
     // Never paste into a field/app the user switched to during transcription.
-    static func insert(_ text: String, into target: Target?, dictation: Int? = nil) async -> String? {
+    static func insert(_ text: String, into target: Target?, dictation: UUID? = nil) async -> String? {
         let text = DictationText.clean(text)
         guard !text.isEmpty else { log("empty_text", dictation: dictation); return "No speech detected" }
         guard allowed else { log("accessibility_missing", dictation: dictation); return "Enable Accessibility to insert; transcript available in Copy Last Transcript." }
@@ -75,7 +75,7 @@ final class TextInsertion {
         return nil
     }
 
-    private static func log(_ outcome: String, dictation: Int?) {
+    private static func log(_ outcome: String, dictation: UUID?) {
         Diagnostics.shared.record("insertion.result", category: "Insertion", dictation: dictation, fields: ["outcome": outcome])
     }
 

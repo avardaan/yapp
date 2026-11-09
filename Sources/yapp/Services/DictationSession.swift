@@ -7,8 +7,7 @@ import OSLog
 final class DictationSession: ObservableObject {
     static let shared = DictationSession()
     enum Phase { case loading, ready, requestingPermission, recording, transcribing, failed }
-    private var nextDictation = 0
-    private var activeDictation: Int?
+    private var activeDictation: UUID?
     private var dictationStarted: TimeInterval = 0
     private var captureStarted: TimeInterval?
     private var captureMS: Double = 0
@@ -36,8 +35,7 @@ final class DictationSession: ObservableObject {
             Diagnostics.shared.record("shortcut.ignored", category: "Shortcut", fields: ["reason": shortcutOwnsRecording ? "already_held" : String(describing: phase)])
             return
         }
-        nextDictation += 1
-        activeDictation = nextDictation
+        activeDictation = UUID.v7()
         dictationStarted = ProcessInfo.processInfo.systemUptime
         captureMS = 0; captureStarted = nil; processingStarted = nil
         trace("dictation.started")

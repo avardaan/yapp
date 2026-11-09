@@ -11,7 +11,7 @@ final class Diagnostics: ObservableObject {
         let timestamp: Date
         let elapsedMS: Double
         let appSession: String
-        let dictation: Int?
+        let dictation: UUID?
         let category: String
         let event: String
         let severity: Severity
@@ -31,7 +31,7 @@ final class Diagnostics: ObservableObject {
     }
 
     /// Fields must be controlled metadata only: never user text, paths, or error descriptions.
-    func record(_ event: String, category: String, dictation: Int? = nil,
+    func record(_ event: String, category: String, dictation: UUID? = nil,
                 severity: Severity = .normal, fields: [String: String] = [:]) {
         let entry = Event(timestamp: Date(), elapsedMS: Self.milliseconds(since: started),
                           appSession: appSession, dictation: dictation, category: category,
@@ -41,7 +41,7 @@ final class Diagnostics: ObservableObject {
         let logger = loggers[category] ?? Logger(subsystem: "com.zeroslop.yapp", category: category)
         loggers[category] = logger
         let metadata = fields.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " ")
-        let message = "\(event) app_session=\(appSession) dictation=\(dictation.map(String.init) ?? "-") \(metadata)"
+        let message = "\(event) app_session=\(appSession) dictation=\(dictation?.uuidString.lowercased() ?? "-") \(metadata)"
         switch severity {
         case .error: logger.error("\(message, privacy: .public)")
         case .fault: logger.fault("\(message, privacy: .public)")
@@ -56,7 +56,7 @@ final class Diagnostics: ObservableObject {
     /// App-level context (launch, model, permissions) plus every event of the latest
     /// `dictations` dictations, as the same JSON Lines format as the file export.
     func recentData(dictations: Int) throws -> Data {
-        let recent = Set(events.compactMap(\.dictation).reversed().reduce(into: [Int]()) {
+        let recent = Set(events.compactMap(\.dictation).reversed().reduce(into: [UUID]()) {
             if $0.count < dictations, !$0.contains($1) { $0.append($1) }
         })
         return try exportData(events.filter { $0.dictation.map(recent.contains) ?? true },
@@ -73,7 +73,7 @@ final class Diagnostics: ObservableObject {
         encoder.outputFormatting = [.sortedKeys]
         let info = Bundle.main.infoDictionary ?? [:]
         var data = try encoder.encode([
-            "event": "diagnostics.export", "schema": "2", "app_session": appSession,
+            "event": "diagnostics.export", "schema": "3", "app_session": appSession,
             "version": info["CFBundleShortVersionString"] as? String ?? "unknown",
             "build": info["CFBundleVersion"] as? String ?? "unknown",
             "dropped_events": String(droppedEvents),
@@ -103,5 +103,18 @@ final class Diagnostics: ObservableObject {
                 alert.runModal()
             }
         }
+    }
+}
+
+extension UUID {
+    /// RFC 9562 version 7: 48-bit Unix milliseconds then random bits, so IDs sort by time.
+    static func v7(now: Date = Date()) -> UUID {
+        var bytes = (0..<16).map { _ in UInt8.random(in: .min ... .max) }
+        let ms = UInt64(now.timeIntervalSince1970 * 1000)
+        for i in 0..<6 { bytes[i] = UInt8(truncatingIfNeeded: ms >> (40 - 8 * i)) }
+        bytes[6] = 0x70 | (bytes[6] & 0x0f)
+        bytes[8] = 0x80 | (bytes[8] & 0x3f)
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 }
