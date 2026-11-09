@@ -3,6 +3,23 @@
     <channel>
         <title>Yapp</title>
         <item>
+            <title>0.1.6</title>
+            <pubDate>Mon, 09 Nov 2026 01:02:46 -0800</pubDate>
+            <link>https://yapp.now/</link>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.1.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[yapp 0.1.6 makes it easier to share useful diagnostics.
+
+- Advanced → Diagnostics → Copy Last 10 Dictation Logs copies recent diagnostic events to the clipboard, ready to paste into a message. It replaces the Show Log window.
+- Diagnostics now record which app and field type received the text, transcript length and whether the model repeated a phrase, and whether the clipboard was restored. No words, audio, or clipboard contents are logged.
+
+Dictation remains fully offline with the bundled English model. Updates remain manual through Check for Updates….
+]]></description>
+            <enclosure url="https://github.com/avardaan/yapp/releases/download/v0.1.6/yapp-0.1.6-arm64.zip" length="136139871" type="application/octet-stream" sparkle:edSignature="KV2PJ3/DKRJLU55LJq3BBVaBxlIyRycNfXY/oyY3rWDz60M4iTp0cPx30BKIAP/dh5BkQLRdvd5XnxUfsIs8Cw=="/>
+        </item>
+        <item>
             <title>0.1.5</title>
             <pubDate>Sun, 08 Nov 2026 23:13:54 -0800</pubDate>
             <link>https://yapp.now/</link>
@@ -37,26 +54,6 @@ Dictation remains fully offline with the bundled English model. Updates remain m
 Dictation remains fully offline. Updates are manual only.
 ]]></description>
             <enclosure url="https://github.com/avardaan/yapp/releases/download/v0.1.4/Yapp-0.1.4-arm64.zip" length="136028982" type="application/octet-stream" sparkle:edSignature="VP1w36IvNBDeiJcIdilcy1ZENu7tRBOemI3IFutsDzVovO+5WINcetdIxUuqy/D84IglMCz90ZDR22I3918fBg=="/>
-        </item>
-        <item>
-            <title>0.1.3</title>
-            <pubDate>Mon, 02 Nov 2026 00:15:32 -0800</pubDate>
-            <link>https://yapp.now/</link>
-            <sparkle:version>4</sparkle:version>
-            <sparkle:shortVersionString>0.1.3</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[# Yapp 0.1.3
-
-- Added a charcoal-and-golden-amber macOS app icon and matching browser favicon.
-- Unified the app indicator and website around golden amber #F4B241.
-- Moved Check for Updates… directly below About, with a separator beneath it.
-
-Apple silicon · macOS 14 or later · English. Dictation stays fully offline.
-Update checks remain manual only. Use Check for Updates… in Yapp 0.1.2 or newer,
-or install the DMG. Users on 0.1.1 and earlier need the DMG once to get the updater.
-]]></description>
-            <enclosure url="https://github.com/avardaan/yapp/releases/download/v0.1.3/Yapp-0.1.3-arm64.zip" length="136027527" type="application/octet-stream" sparkle:edSignature="WKDu/6VNbYVgJ9v545UsjlCAZ9nxHTqaC3b+Vze+14Q7Ze18dtIe5iA4TOBK9Ph2pebG89d8UQFsj7NhBQlQCA=="/>
         </item>
     </channel>
 </rss>
