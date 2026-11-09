@@ -34,7 +34,8 @@ No update network requests are needed for normal dictation or app launch.
 4. Upload the versioned DMG/checksum, stable `Yapp-arm64.dmg`/checksum, and
    update ZIP to the matching GitHub Release before marking it latest.
    Confirm the public download URL and digest. Then copy the generated appcast
-   into `website/appcast.xml`, commit and push Pages. The website’s stable latest-download link needs no version edit.
+   into `website/appcast.xml`, run `./script/set-download-link.sh` to point the
+   website at the versioned DMG, commit and push Pages.
    Never advertise an archive before it is available.
 5. Test an older, signed updater-enabled build against the live feed: manually
    check, download, install/relaunch, then verify the installed build/signature.

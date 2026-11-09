@@ -6,11 +6,11 @@ GitHub Pages deploys `website/` through `.github/workflows/pages.yml` on pushes
 to main. Configure Settings → Pages → Source: GitHub Actions. Preserve the custom
 domain `yapp.now` and Enforce HTTPS. Never upload the repository root as the site.
 
-The download button uses GitHub’s stable latest-asset URL:
-`https://github.com/avardaan/yapp/releases/latest/download/Yapp-arm64.dmg`.
-Upload `Yapp-arm64.dmg` and its checksum before marking each release latest.
-The release script creates these alongside versioned artifacts. Keep versioned
-assets for existing direct links. The Sparkle ZIP/appcast uses versioned URLs;
+The download button links the current versioned DMG, so users download
+`Yapp-<version>-arm64.dmg`. After uploading a release, `./script/set-download-link.sh`
+checks the asset is public and updates the link. The release script also creates
+a stable `Yapp-arm64.dmg`; keep uploading it so older `releases/latest/download/`
+links keep working. The Sparkle ZIP/appcast uses versioned URLs;
 publish the appcast only after that ZIP is uploaded.
 
 DNS at Porkbun: root ALIAS → avardaan.github.io; www CNAME → avardaan.github.io.
