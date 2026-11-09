@@ -151,7 +151,7 @@ final class TutorialPractice: ObservableObject {
     @discardableResult
     func receive(_ text: String, for id: UUID) -> Bool {
         guard self.id == id else { return false }
-        self.text += (self.text.isEmpty ? "" : "\n") + text
+        self.text = text
         return true
     }
 }
@@ -263,13 +263,14 @@ final class GuideCanvas: NSView {
             NSGraphicsContext.current?.compositingOperation = .clear
             NSBezierPath(ovalIn: icon).fill()
             NSGraphicsContext.restoreGraphicsState()
-            let label = NSRect(x: bounds.midX - 170, y: min(practiceBox.maxY + 136, bounds.maxY - 54), width: 340, height: 30)
+            let label = NSRect(x: min(max(24, icon.midX - 205), bounds.maxX - 264),
+                               y: icon.minY - 112, width: 240, height: 30)
             drawText("Yapp lives up here.", rect: label, size: 22, weight: .semibold)
-            let start = NSPoint(x: label.maxX + 8, y: label.midY)
+            let start = NSPoint(x: label.midX + 25, y: label.maxY + 7)
             let tip = NSPoint(x: icon.midX, y: icon.minY - 9)
             drawArrow(from: start, to: tip,
-                      control1: NSPoint(x: max(start.x, tip.x - 60), y: start.y),
-                      control2: NSPoint(x: tip.x, y: tip.y - 65))
+                      control1: NSPoint(x: start.x + 45, y: start.y + 2),
+                      control2: NSPoint(x: tip.x, y: tip.y - 38))
         }
         let box = NSBezierPath(roundedRect: practiceBox, xRadius: 14, yRadius: 14)
         NSColor(srgbRed: 0.08, green: 0.08, blue: 0.09, alpha: 0.95).setFill(); box.fill()
@@ -291,12 +292,27 @@ final class GuideCanvas: NSView {
             drawArrow(from: start, to: tip,
                       control1: NSPoint(x: start.x, y: tip.y + 24), control2: NSPoint(x: tip.x, y: tip.y + 25))
         } else if stage == .result {
-            let label = NSRect(x: practiceBox.midX - 180, y: practiceBox.minY - 70, width: 360, height: 28)
-            drawText("That’s your voice, in text.", rect: label, size: 18, weight: .medium)
-            let tip = NSPoint(x: practiceBox.minX + 12, y: practiceBox.maxY - 33)
-            let outside = max(16, practiceBox.minX - 46)
-            drawArrow(from: NSPoint(x: label.minX + 16, y: label.midY + 7), to: tip,
-                      control1: NSPoint(x: outside, y: label.maxY + 10), control2: NSPoint(x: outside, y: tip.y))
+            let text = "That’s your voice, in text."
+            let labelWidth = ceil((text as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .medium)]).width) + 4
+            if practiceBox.minX >= labelWidth + 80 {
+                // Put the explanation beside the first line, with a short connector.
+                let tip = NSPoint(x: practiceBox.minX + 12, y: practiceBox.maxY - 33)
+                let label = NSRect(x: practiceBox.minX - labelWidth - 55, y: tip.y - 13, width: labelWidth, height: 26)
+                drawText(text, rect: label, size: 18, weight: .medium)
+                let start = NSPoint(x: label.maxX + 10, y: label.midY)
+                drawArrow(from: start, to: tip,
+                          control1: NSPoint(x: start.x + 14, y: start.y - 8),
+                          control2: NSPoint(x: tip.x - 18, y: tip.y - 8))
+            } else {
+                // Narrow screens use a compact upward arrow rather than an offscreen loop.
+                let label = NSRect(x: practiceBox.midX - labelWidth / 2, y: practiceBox.minY - 76, width: labelWidth, height: 26)
+                drawText(text, rect: label, size: 18, weight: .medium)
+                let start = NSPoint(x: label.midX, y: label.maxY + 8)
+                let tip = NSPoint(x: practiceBox.midX, y: practiceBox.minY - 8)
+                drawArrow(from: start, to: tip,
+                          control1: NSPoint(x: start.x + 12, y: start.y + 12),
+                          control2: NSPoint(x: tip.x + 12, y: tip.y - 12))
+            }
         }
     }
 

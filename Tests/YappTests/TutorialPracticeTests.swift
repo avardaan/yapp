@@ -4,13 +4,13 @@ import AppKit
 
 final class TutorialPracticeTests: XCTestCase {
     @MainActor
-    func testPracticeAccumulatesOnlyForCurrentTutorial() throws {
+    func testPracticeReplacesPreviousTextOnlyForCurrentTutorial() throws {
         let practice = TutorialPractice()
         practice.begin()
         let id = try XCTUnwrap(practice.id)
         XCTAssertTrue(practice.receive("First try.", for: id))
         XCTAssertTrue(practice.receive("Second try.", for: id))
-        XCTAssertEqual(practice.text, "First try.\nSecond try.")
+        XCTAssertEqual(practice.text, "Second try.")
         practice.end()
         XCTAssertTrue(practice.text.isEmpty)
         XCTAssertFalse(practice.receive("Late result.", for: id))
