@@ -21,11 +21,6 @@ struct YappApp: App {
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
-
-        Window("Log", id: DiagnosticsLogView.windowID) {
-            DiagnosticsLogView()
-        }
-        .defaultPosition(.center)
     }
 }
 

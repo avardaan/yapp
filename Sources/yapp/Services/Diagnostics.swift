@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 
 /// One fixed, content-free local event stream. Nothing is uploaded.
 @MainActor
-final class Diagnostics: ObservableObject {
+final class Diagnostics {
     static let shared = Diagnostics()
     enum Severity: String, Codable { case normal, error, fault }
     struct Event: Codable {
@@ -21,7 +21,7 @@ final class Diagnostics: ObservableObject {
     private let started = ProcessInfo.processInfo.systemUptime
     private let appSession = UUID().uuidString
     private var loggers: [String: Logger] = [:]
-    @Published private(set) var events: [Event] = []
+    private(set) var events: [Event] = []
     private(set) var droppedEvents = 0
 
     init(defaults: UserDefaults = .standard, capacity: Int = 1000) {
@@ -53,14 +53,28 @@ final class Diagnostics: ObservableObject {
         ((ProcessInfo.processInfo.systemUptime - start) * 1000).rounded()
     }
 
-    /// App-level context (launch, model, permissions) plus every event of the latest
-    /// `dictations` dictations, as the same JSON Lines format as the file export.
+    /// Every event, dictation or not, after the last event of the dictation just before the
+    /// latest `dictations` ones; the whole launch if there are fewer. Same JSON Lines format.
     func recentData(dictations: Int) throws -> Data {
-        let recent = Set(events.compactMap(\.dictation).reversed().reduce(into: [UUID]()) {
-            if $0.count < dictations, !$0.contains($1) { $0.append($1) }
-        })
-        return try exportData(events.filter { $0.dictation.map(recent.contains) ?? true },
-                              scope: "Current app session; app events plus the latest \(dictations) dictations. No speech or transcripts.")
+        var seen: [UUID] = []
+        var start = events.startIndex
+        for index in events.indices.reversed() {
+            guard let id = events[index].dictation, !seen.contains(id) else { continue }
+            if seen.count == dictations { start = index + 1; break }
+            seen.append(id)
+        }
+        return try exportData(Array(events[start...]),
+                              scope: "Current app session; all events since before the latest \(dictations) dictations. No speech or transcripts.")
+    }
+
+    static let copiedDictations = 10
+
+    func copyRecent() {
+        guard let data = try? recentData(dictations: Self.copiedDictations),
+              let text = String(data: data, encoding: .utf8) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        record("log.copied", category: "Diagnostics")
     }
 
     func exportData() throws -> Data {
