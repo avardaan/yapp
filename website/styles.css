@@ -35,7 +35,8 @@ footer{border-top:1px solid var(--line);padding-top:28px;padding-bottom:35px;dis
 footer a{text-decoration:underline;text-decoration-color:currentColor;display:inline-flex;align-items:center;gap:3px;color:var(--ink)}
 footer a:hover{text-decoration:underline} @media(max-width:760px){header,main,footer{padding-left:24px;padding-right:24px}
 header{height:85px}
-.hero{grid-template-columns:1fr;padding:40px 0 60px;gap:42px}
+.hero{grid-template-columns:1fr;padding:40px 0 60px;gap:42px;text-align:center}
+.hero .intro{margin-left:auto;margin-right:auto}
 h1{letter-spacing:-3px}
 .strip{font-size:14px}
 .strip span{padding:4px 10px;gap:7px}
